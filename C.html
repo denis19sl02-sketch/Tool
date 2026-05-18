@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DENISIA NEON CALCULATOR</title>
+    <style>
+        /* Глубокий черный фон страницы */
+        body {
+            background-color: #000000;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        /* Тёмно-серый корпус калькулятора с яркой голубой рамкой */
+        .calculator {
+            background-color: #12161a;
+            padding: 25px;
+            border-radius: 12px;
+            border: 2px solid #00d2ff;
+            box-shadow: 0 0 20px rgba(0, 210, 255, 0.4);
+            width: 320px;
+            box-sizing: border-box;
+        }
+
+        /* Чёрный экран вывода с голубым неоновым свечением и текстом */
+        #display {
+            width: 100%;
+            height: 65px;
+            background-color: #000000;
+            color: #00d2ff;
+            border: 2px solid #00d2ff;
+            font-family: 'Courier New', monospace;
+            font-size: 28px;
+            font-weight: bold;
+            text-align: right;
+            padding: 15px;
+            box-sizing: border-box;
+            margin-bottom: 20px;
+            border-radius: 6px;
+            box-shadow: 0 0 10px rgba(0, 210, 255, 0.5), inset 0 0 10px rgba(0, 210, 255, 0.3);
+        }
+
+        /* Сетка кнопок */
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        /* Тёмно-серые кнопки с голубым текстом и голубой рамкой */
+        button {
+            background-color: #1c2128;
+            color: #00d2ff;
+            border: 1px solid #00d2ff;
+            font-family: 'Courier New', monospace;
+            font-size: 22px;
+            font-weight: bold;
+            padding: 18px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            box-shadow: 0 0 5px rgba(0, 210, 255, 0.2);
+        }
+
+        /* Вспышка кнопки при нажатии */
+        button:active {
+            background-color: #00d2ff;
+            color: #000000;
+            box-shadow: 0 0 15px #00d2ff;
+        }
+
+        /* Кнопка очистки С (Красный неон для контраста управления) */
+        .clear {
+            background-color: #1a0f13;
+            color: #ff3366;
+            border-color: #ff3366;
+            box-shadow: 0 0 5px rgba(255, 51, 102, 0.2);
+        }
+        .clear:active {
+            background-color: #ff3366;
+            color: #000000;
+            box-shadow: 0 0 15px #ff3366;
+        }
+
+        /* Голубая кнопка Равно (=) */
+        .equal {
+            background-color: #00d2ff;
+            color: #000000;
+            grid-column: span 2;
+            box-shadow: 0 0 12px rgba(0, 210, 255, 0.6);
+        }
+        .equal:active {
+            background-color: #ffffff;
+            box-shadow: 0 0 20px #ffffff;
+        }
+    </style>
+</head>
+<body>
+
+<div class="calculator">
+    <input type="text" id="display" readonly placeholder="0">
+    
+    <div class="buttons">
+        <button class="clear">C</button>
+        <button>/</button>
+        <button>×</button>
+        <button>-</button>
+
+        <button>7</button>
+        <button>8</button>
+        <button>9</button>
+        <button>+</button>
+
+        <button>4</button>
+        <button>5</button>
+        <button>6</button>
+        <button>.</button>
+
+        <button>1</button>
+        <button>2</button>
+        <button>3</button>
+        <button>0</button>
+
+        <button class="equal">=</button>
+    </div>
+</div>
+
+<script>
+    // Логика работы на чистом JS
+    document.addEventListener('DOMContentLoaded', () => {
+        const display = document.getElementById('display');
+        const buttons = document.querySelectorAll('.buttons button');
+
+        buttons.forEach(button => {
+            button.addEventListener('click', () => {
+                const text = button.innerText;
+
+                if (text === 'C') {
+                    display.value = '';
+                } 
+                else if (text === '=') {
+                    try {
+                        if (display.value !== '') {
+                            // Вычисляем результат математической строки
+                            display.value = eval(display.value);
+                        }
+                    } catch (e) {
+                        display.value = 'Error';
+                    }
+                } 
+                else if (text === '×') {
+                    display.value += '*';
+                } 
+                else {
+                    display.value += text;
+                }
+            });
+        });
+    });
+</script>
+
+</body>
+</html>
