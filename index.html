@@ -4,50 +4,57 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>POLYGLOT IDE - FRONTEND</title>
-    <!-- Подключаем стили калькулятора -->
+    <!-- Подключаем стили для обоих модулей -->
     <link rel="stylesheet" href="3.css">
 </head>
-<body style="background-color: #000; color: #00d2ff; margin: 0; padding: 20px;">
+<body style="background-color: #000; color: #00d2ff; margin: 0; padding: 20px; display: flex; flex-direction: column; gap: 20px; align-items: center;">
 
-    <!-- Сюда загрузится интерфейс калькулятора -->
-    <div id="app"></div>
+    <!-- Контейнер для калькулятора логики -->
+    <div id="app-logic"></div>
+
+    <!-- Контейнер для клавиатуры ввода -->
+    <div id="app-keyboard"></div>
 
     <script>
-        // Загружаем интерфейс и логику из 3.html
-        fetch('3.html')
-            .then(response => {
-                if (!response.ok) throw new Error('Не удалось загрузить 3.html');
-                return response.text();
-            })
-            .then(htmlText => {
-                var parser = new DOMParser();
-                var doc = parser.parseFromString(htmlText, 'text/html');
-                
-                // 1. Вытаскиваем и вставляем визуальную часть (всё кроме скриптов)
-                var bodyContent = doc.body ? doc.body.innerHTML : htmlText;
-                // Очищаем от тегов script, чтобы они не дублировались текстом
-                var tempDiv = document.createElement('div');
-                tempDiv.innerHTML = bodyContent;
-                var scriptTags = tempDiv.querySelectorAll('script');
-                scriptTags.forEach(s => s.remove());
-                
-                document.getElementById('app').innerHTML = tempDiv.innerHTML;
+        // Функция для загрузки модуля (HTML + Скрипты) в указанный контейнер
+        function loadModule(fileName, containerId) {
+            return fetch(fileName)
+                .then(response => {
+                    if (!response.ok) throw new Error('Ошибка загрузки ' + fileName);
+                    return response.text();
+                })
+                .then(htmlText => {
+                    var parser = new DOMParser();
+                    var doc = parser.parseFromString(htmlText, 'text/html');
+                    
+                    // 1. Вырезаем скрипты из разметки, чтобы перенести чистый HTML
+                    var tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = doc.body ? doc.body.innerHTML : htmlText;
+                    var scriptTags = tempDiv.querySelectorAll('script');
+                    scriptTags.forEach(s => s.remove());
+                    
+                    // Вставляем HTML в нужный контейнер
+                    document.getElementById(containerId).innerHTML = tempDiv.innerHTML;
 
-                // 2. Вытаскиваем, создаем заново и запускаем скрипты
-                var scripts = doc.querySelectorAll('script');
-                scripts.forEach(oldScript => {
-                    var newScript = document.createElement('script');
-                    if (oldScript.src) {
-                        newScript.src = oldScript.src;
-                    } else {
-                        newScript.text = oldScript.text;
-                    }
-                    document.body.appendChild(newScript);
-                });
+                    // 2. Находим и запускаем скрипты в контексте главного окна
+                    var scripts = doc.querySelectorAll('script');
+                    scripts.forEach(oldScript => {
+                        var newScript = document.createElement('script');
+                        if (oldScript.src) {
+                            newScript.src = oldScript.src;
+                        } else {
+                            newScript.text = oldScript.text;
+                        }
+                        document.body.appendChild(newScript);
+                    });
+                    console.log('Модуль ' + fileName + ' успешно переехал!');
+                })
+                .catch(err => console.error('Ошибка переезда модуля ' + fileName + ':', err));
+        }
 
-                console.log('Интерфейс и мозг из 3.html успешно интегрированы!');
-            })
-            .catch(err => console.error('Ошибка переезда мозга:', err));
+        // Загружаем оба файла последовательно
+        loadModule('3.html', 'app-logic')
+            .then(() => loadModule('4.html', 'app-keyboard'));
     </script>
 </body>
 </html>
