@@ -1,0 +1,91 @@
+/* КОСМИЧЕСКИЙ СЕРЫЙ И ГОЛУБОЙ СТИЛЬ (CSS) */
+
+/* Глубокий чёрный фон всей страницы */
+body {
+    background-color: #000000;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+/* Корпус калькулятора — тёмно-серый с яркой голубой неоновой рамкой */
+.calculator {
+    background-color: #1c2128; /* Тёмно-серый цвет */
+    padding: 25px;
+    border-radius: 12px;
+    border: 2px solid #00d2ff; /* Голубой неон */
+    box-shadow: 0 0 20px rgba(0, 210, 255, 0.4); /* Голубое свечение */
+    width: 320px;
+    box-sizing: border-box;
+}
+
+/* Экран калькулятора — абсолютно чёрный с голубым текстом и внутренней подсветкой */
+#display {
+    width: 100%;
+    height: 60px;
+    background-color: #000000; /* Чёрный экран */
+    border: 1px solid #00d2ff; /* Голубая граница */
+    color: #00d2ff; /* Голубые светящиеся цифры */
+    text-align: right;
+    padding: 15px;
+    font-size: 26px;
+    font-family: 'Courier New', monospace;
+    box-sizing: border-box;
+    margin-bottom: 20px;
+    border-radius: 6px;
+    box-shadow: inset 0 0 10px rgba(0, 210, 255, 0.3); /* Внутренний неон */
+}
+
+/* Сетка для расстановки кнопок */
+.buttons {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+/* Стиль обычных кнопок — серые с голубым текстом и голубой рамкой */
+button {
+    padding: 18px;
+    font-size: 20px;
+    font-weight: bold;
+    font-family: 'Courier New', monospace;
+    cursor: pointer;
+    background-color: #2d333b; /* Серый цвет кнопок */
+    border: 1px solid #00d2ff; /* Голубая рамка */
+    color: #00d2ff; /* Голубой текст */
+    border-radius: 6px;
+    transition: all 0.2s ease-in-out;
+}
+
+/* Эффект при нажатии на серые кнопки — они заливаются голубым */
+button:active {
+    background-color: #00d2ff;
+    color: #000000;
+    box-shadow: 0 0 15px #00d2ff;
+}
+
+/* Кнопка сброса "C" — сделаем её чуть темнее, чтобы выделялась */
+.clear {
+    background-color: #22272e;
+    color: #ff3366; /* Выделяется красным неоном для сброса */
+    border-color: #ff3366;
+}
+.clear:active {
+    background-color: #ff3366;
+    color: #000000;
+    box-shadow: 0 0 15px #ff3366;
+}
+
+/* Главная кнопка "=" — полностью залита голубым, текст чёрный */
+.equal {
+    background-color: #00d2ff; /* Полностью голубая кнопка */
+    color: #000000; /* Чёрный текст */
+    grid-column: span 2; /* Растягивается на две ячейки */
+}
+.equal:active {
+    background-color: #ffffff; /* При сильном клике вспыхивает белым */
+    box-shadow: 0 0 20px #ffffff;
+}
