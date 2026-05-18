@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POLYGLOT IDE - FRONTEND</title>
+    <lesheet" href="2.html">
+    <lesheet" href="3.html">
+    <
+</head>
+<body style="background-color: #000; color: #00d2ff; margin: 0; padding: 20px;">
+
+    <div id="app"></div>
+
+    <script>
+        fetch('3.html')
+            .then(response => response.text())
+            .then(htmlText => {
+                // Создаем временный элемент, чтобы вытащить скрипты из 3.html
+                var parser = new DOMParser();
+                var doc = parser.parseFromString(htmlText, 'text/html');
+                var scripts = doc.querySelectorAll('script');
+                
+                // Переносим и запускаем каждый скрипт-модуль внутри фронтенда
+                scripts.forEach(oldScript => {
+                    var newScript = document.createElement('script');
+                    if (oldScript.src) {
+                        newScript.src = oldScript.src;
+                    } else {
+                        newScript.text = oldScript.text;
+                    }
+                    document.body.appendChild(newScript);
+                });
+                console.log('Мозг из 3.html успешно перешел в 2.html!');
+            })
+            .catch(err => console.error('Ошибка переезда мозга:', err));
+    </script>
+</body>
+</html>
