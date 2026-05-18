@@ -1,0 +1,56 @@
+/* ТВОЙ CSS ДЛЯ ЭКРАНА И КНОПОК В ГОЛУБОМ ЦВЕТЕ */
+
+/* ЭКРАН ВЫВОДА РЕЗУЛЬТАТА */
+#display {
+    width: 100%;
+    height: 65px;
+    background-color: #000000; /* Абсолютно чёрный фон внутри экрана */
+    color: #00d2ff;            /* Яркие голубые неоновые цифры */
+    border: 2px solid #00d2ff; /* Голубая светящаяся рамка экрана */
+    font-family: 'Courier New', monospace;
+    font-size: 28px;
+    font-weight: bold;
+    text-align: right;         /* Цифры выводятся справа */
+    padding: 15px;
+    box-sizing: border-box;
+    margin-bottom: 20px;
+    border-radius: 6px;
+    /* Неоновое свечение внутрь и наружу экрана */
+    box-shadow: 0 0 10px rgba(0, 210, 255, 0.5), inset 0 0 10px rgba(0, 210, 255, 0.3);
+}
+
+/* ОБЩИЙ СТИЛЬ ДЛЯ ВСЕХ КНОПОК */
+button {
+    background-color: #1c2128; /* Тёмно-серый цвет самой кнопки */
+    color: #00d2ff;            /* Голубой цвет текста и знаков на кнопке */
+    border: 1px solid #00d2ff; /* Голубая неоновая рамка вокруг кнопки */
+    font-family: 'Courier New', monospace;
+    font-size: 22px;
+    font-weight: bold;
+    padding: 18px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    /* Легкое голубое свечение для каждой кнопки */
+    box-shadow: 0 0 5px rgba(0, 210, 255, 0.2);
+}
+
+/* ЭФФЕКТ ПРИ НАЖАТИИ НА КНОПКУ */
+button:active {
+    background-color: #00d2ff; /* При клике кнопка полностью заливается голубым */
+    color: #000000;            /* Текст внутри становится чёрным для контраста */
+    box-shadow: 0 0 15px #00d2ff; /* Мощная неоновая вспышка */
+}
+
+/* КНОПКА РАВНО (=) — ДЛЯ МАКСИМАЛЬНОГО ГЛАВНОГО ЦВЕТА */
+.equal {
+    background-color: #00d2ff; /* Сразу залита голубым цветом */
+    color: #000000;            /* Чёрный знак равенства */
+    grid-column: span 2;       /* Растянута на 2 ячейки */
+    box-shadow: 0 0 12px rgba(0, 210, 255, 0.6);
+}
+
+.equal:active {
+    background-color: #ffffff; /* При нажатии вспыхивает белым */
+    box-shadow: 0 0 20px #ffffff;
+}
