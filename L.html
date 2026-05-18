@@ -1,0 +1,33 @@
+<div class="calc-block">
+    <div class="screen" id="math-screen">0</div>
+    <div class="grid">
+        <button onclick="pressMath('7')">7</button>
+        <button onclick="pressMath('8')">8</button>
+        <button onclick="pressMath('9')">9</button>
+        <button onclick="pressMath('/')">÷</button>
+        <button onclick="pressMath('4')">4</button>
+        <button onclick="pressMath('5')">5</button>
+        <button onclick="pressMath('6')">6</button>
+        <button onclick="pressMath('*')">×</button>
+        <button onclick="pressMath('1')">1</button>
+        <button onclick="pressMath('2')">2</button>
+        <button onclick="pressMath('3')">3</button>
+        <button onclick="pressMath('-')">-</button>
+        <button onclick="pressMath('0')">0</button>
+        <button onclick="clearMath()" style="color: #ff0055; border-color: #ff0055;">C</button>
+        <button onclick="runMath()">=</button>
+        <button onclick="pressMath('+')">+</button>
+    </div>
+</div>
+
+<script>
+    let mathExpr = "";
+    function pressMath(val) { mathExpr += val; document.getElementById('math-screen').innerText = mathExpr; }
+    function clearMath() { mathExpr = ""; document.getElementById('math-screen').innerText = "0"; }
+    function runMath() {
+        try {
+            document.getElementById('math-screen').innerText = Function('"use strict";return (' + mathExpr + ')')();
+            mathExpr = "";
+        } catch(e) { document.getElementById('math-screen').innerText = "ERR"; mathExpr = ""; }
+    }
+</script>
