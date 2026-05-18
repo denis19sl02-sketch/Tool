@@ -4,20 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>POLYGLOT IDE - FRONTEND</title>
-    <!-- Подключаем стили для обоих модулей -->
-    <link rel="stylesheet" href="3.css">
+    <!-- Динамически подключаем стили из css.3 -->
+    <link rel="stylesheet" href="css.3">
 </head>
 <body style="background-color: #000; color: #00d2ff; margin: 0; padding: 20px; display: flex; flex-direction: column; gap: 20px; align-items: center;">
 
-    <!-- Контейнер для калькулятора логики -->
+    <!-- Сюда загружаются визуальные части калькуляторов -->
     <div id="app-logic"></div>
-
-    <!-- Контейнер для клавиатуры ввода -->
     <div id="app-keyboard"></div>
 
     <script>
-        // Функция для загрузки модуля (HTML + Скрипты) в указанный контейнер
-        function loadModule(fileName, containerId) {
+        // Функция для загрузки разметки и скриптов из HTML-файлов
+        function loadHtmlModule(fileName, containerId) {
             return fetch(fileName)
                 .then(response => {
                     if (!response.ok) throw new Error('Ошибка загрузки ' + fileName);
@@ -27,16 +25,17 @@
                     var parser = new DOMParser();
                     var doc = parser.parseFromString(htmlText, 'text/html');
                     
-                    // 1. Вырезаем скрипты из разметки, чтобы перенести чистый HTML
                     var tempDiv = document.createElement('div');
                     tempDiv.innerHTML = doc.body ? doc.body.innerHTML : htmlText;
+                    
+                    // Удаляем теги script из HTML, чтобы они не дублировались текстом
                     var scriptTags = tempDiv.querySelectorAll('script');
                     scriptTags.forEach(s => s.remove());
                     
-                    // Вставляем HTML в нужный контейнер
+                    // Вставляем чистый интерфейс в контейнер
                     document.getElementById(containerId).innerHTML = tempDiv.innerHTML;
 
-                    // 2. Находим и запускаем скрипты в контексте главного окна
+                    // Активируем скрипты в главном окне
                     var scripts = doc.querySelectorAll('script');
                     scripts.forEach(oldScript => {
                         var newScript = document.createElement('script');
@@ -47,14 +46,32 @@
                         }
                         document.body.appendChild(newScript);
                     });
-                    console.log('Модуль ' + fileName + ' успешно переехал!');
+                    console.log('Мозг из ' + fileName + ' успешно импортирован!');
                 })
-                .catch(err => console.error('Ошибка переезда модуля ' + fileName + ':', err));
+                .catch(err => console.error('Ошибка импорта ' + fileName + ':', err));
         }
 
-        // Загружаем оба файла последовательно
-        loadModule('3.html', 'app-logic')
-            .then(() => loadModule('4.html', 'app-keyboard'));
+        // Функция для логирования загрузки скриптов python.1 и python.2
+        function loadPythonStub(fileName) {
+            return fetch(fileName)
+                .then(response => {
+                    if (!response.ok) throw new Error('Файл не найден: ' + fileName);
+                    console.log('Скрипт логики ' + fileName + ' подключен к среде!');
+                })
+                .catch(err => console.error(err));
+        }
+
+        // Запускаем полную сборку всей империи в один фронтенд
+        Promise.all([
+            loadPythonStub('python.1'),
+            loadPythonStub('python.2')
+        ]).then(() => {
+            return loadHtmlModule('3.html', 'app-logic');
+        }).then(() => {
+            return loadHtmlModule('x.html', 'app-keyboard');
+        }).then(() => {
+            console.log('ВСЯ СИСТЕМА ДЕНИСИЯ ИНТЕГРИРОВАНА!');
+        });
     </script>
 </body>
 </html>
