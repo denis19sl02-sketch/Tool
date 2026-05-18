@@ -4,74 +4,55 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>POLYGLOT IDE - FRONTEND</title>
-    <!-- Динамически подключаем стили из css.3 -->
     <link rel="stylesheet" href="css.3">
 </head>
-<body style="background-color: #000; color: #00d2ff; margin: 0; padding: 20px; display: flex; flex-direction: column; gap: 20px; align-items: center;">
+<body style="background-color: #000; color: #00d2ff; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center;">
 
-    <!-- Сюда загружаются визуальные части калькуляторов -->
     <div id="app-logic"></div>
     <div id="app-keyboard"></div>
 
     <script>
-        // Функция для загрузки разметки и скриптов из HTML-файлов
+        function loadScriptModule(fileName) {
+            return fetch(fileName)
+                .then(r => r.text())
+                .then(text => {
+                    let script = document.createElement('script');
+                    script.text = text;
+                    document.body.appendChild(script);
+                });
+        }
+
         function loadHtmlModule(fileName, containerId) {
             return fetch(fileName)
-                .then(response => {
-                    if (!response.ok) throw new Error('Ошибка загрузки ' + fileName);
-                    return response.text();
-                })
+                .then(r => r.text())
                 .then(htmlText => {
-                    var parser = new DOMParser();
-                    var doc = parser.parseFromString(htmlText, 'text/html');
-                    
-                    var tempDiv = document.createElement('div');
+                    let parser = new DOMParser();
+                    let doc = parser.parseFromString(htmlText, 'text/html');
+                    let tempDiv = document.createElement('div');
                     tempDiv.innerHTML = doc.body ? doc.body.innerHTML : htmlText;
                     
-                    // Удаляем теги script из HTML, чтобы они не дублировались текстом
-                    var scriptTags = tempDiv.querySelectorAll('script');
-                    scriptTags.forEach(s => s.remove());
+                    let scripts = tempDiv.querySelectorAll('script');
+                    scripts.forEach(s => s.remove());
                     
-                    // Вставляем чистый интерфейс в контейнер
                     document.getElementById(containerId).innerHTML = tempDiv.innerHTML;
 
-                    // Активируем скрипты в главном окне
-                    var scripts = doc.querySelectorAll('script');
-                    scripts.forEach(oldScript => {
-                        var newScript = document.createElement('script');
-                        if (oldScript.src) {
-                            newScript.src = oldScript.src;
-                        } else {
-                            newScript.text = oldScript.text;
-                        }
+                    doc.querySelectorAll('script').forEach(oldScript => {
+                        let newScript = document.createElement('script');
+                        newScript.text = oldScript.text;
                         document.body.appendChild(newScript);
                     });
-                    console.log('Мозг из ' + fileName + ' успешно импортирован!');
-                })
-                .catch(err => console.error('Ошибка импорта ' + fileName + ':', err));
+                });
         }
 
-        // Функция для логирования загрузки скриптов python.1 и python.2
-        function loadPythonStub(fileName) {
-            return fetch(fileName)
-                .then(response => {
-                    if (!response.ok) throw new Error('Файл не найден: ' + fileName);
-                    console.log('Скрипт логики ' + fileName + ' подключен к среде!');
-                })
-                .catch(err => console.error(err));
-        }
-
-        // Запускаем полную сборку всей империи в один фронтенд
+        // Загружаем всё по очереди
         Promise.all([
-            loadPythonStub('python.1'),
-            loadPythonStub('python.2')
-        ]).then(() => {
-            return loadHtmlModule('3.html', 'app-logic');
-        }).then(() => {
-            return loadHtmlModule('x.html', 'app-keyboard');
-        }).then(() => {
-            console.log('ВСЯ СИСТЕМА ДЕНИСИЯ ИНТЕГРИРОВАНА!');
-        });
+            loadScriptModule('python.1'),
+            loadScriptModule('python.2')
+        ])
+        .then(() => loadHtmlModule('3.html', 'app-logic'))
+        .then(() => loadHtmlModule('x.html', 'app-keyboard'))
+        .then(() => console.log('СИСТЕМА ДЕНИСИЯ ИНТЕГРИРОВАНА!'))
+        .catch(err => console.error('Ошибка загрузки файлов компонент:', err));
     </script>
 </body>
 </html>
