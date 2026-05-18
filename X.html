@@ -1,0 +1,37 @@
+<div class="calc-block">
+    <div class="screen" id="logic-screen">0</div>
+    <div class="grid">
+        <button onclick="pressLogic('1')">1</button>
+        <button onclick="pressLogic('0')">0</button>
+        <button onclick="pressLogic('AND')">AND</button>
+        <button onclick="pressLogic('OR')">OR</button>
+        <button onclick="pressLogic('NOT')">NOT</button>
+        <button onclick="pressLogic('XOR')">XOR</button>
+        <button onclick="pressLogic('->')">-&gt;</button>
+        <button onclick="pressLogic('<->')">&lt;-&gt;</button>
+        <button onclick="clearLogic()" style="grid-column: span 2; color: #ff0055; border-color: #ff0055;">C</button>
+        <button onclick="runLogic()" style="grid-column: span 2;">=</button>
+    </div>
+</div>
+
+<script>
+    let logicExpr = "";
+    function pressLogic(val) { logicExpr += val + " "; document.getElementById('logic-screen').innerText = logicExpr; }
+    function clearLogic() { logicExpr = ""; document.getElementById('logic-screen').innerText = "0"; }
+    function runLogic() {
+        try {
+            let parts = logicExpr.trim().split(" ");
+            if(parts[0] === 'NOT') {
+                let a = parseInt(parts[1]);
+                document.getElementById('logic-screen').innerText = calculateBasicLogic('NOT', a);
+            } else {
+                let a = parseInt(parts[0]);
+                let op = parts[1];
+                let b = parseInt(parts[2]);
+                let res = (['AND','OR'].includes(op)) ? calculateBasicLogic(op, a, b) : calculateAdvancedLogic(op, a, b);
+                document.getElementById('logic-screen').innerText = res;
+            }
+            logicExpr = "";
+        } catch(e) { document.getElementById('logic-screen').innerText = "ERR"; logicExpr = ""; }
+    }
+</script>
