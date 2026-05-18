@@ -1,0 +1,2879 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>POLYRUN — Multi-Language Compiler</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c10;
+    --surface: #111318;
+    --surface2: #1a1d25;
+    --border: #252830;
+    --accent: #00e5ff;
+    --accent2: #ff4d6d;
+    --accent3: #a8ff57;
+    --text: #e8eaf0;
+    --muted: #5a5f70;
+    --font-code: 'JetBrains Mono', monospace;
+    --font-ui: 'Syne', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-ui);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* HEADER */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .logo {
+    font-size: 1.3rem;
+    font-weight: 800;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+  }
+  .logo span { color: var(--accent2); }
+
+  .lang-tabs {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .lang-tab {
+    padding: 5px 12px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-family: var(--font-ui);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .lang-tab:hover { border-color: var(--accent); color: var(--accent); }
+  .lang-tab.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #000;
+  }
+  .lang-tab[data-lang="js"].active { background: #f7df1e; border-color: #f7df1e; color: #000; }
+  .lang-tab[data-lang="python"].active { background: #3572a5; border-color: #3572a5; color: #fff; }
+  .lang-tab[data-lang="lua"].active { background: #6e4c9f; border-color: #6e4c9f; color: #fff; }
+  .lang-tab[data-lang="brainf"].active { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+  .lang-tab[data-lang="forth"].active { background: #ff7f00; border-color: #ff7f00; color: #fff; }
+  .lang-tab[data-lang="whitespace"].active { background: #888; border-color: #888; color: #fff; }
+  .lang-tab[data-lang="css"].active { background: #264de4; border-color: #264de4; color: #fff; }
+  .lang-tab[data-lang="sql"].active { background: var(--accent3); border-color: var(--accent3); color: #000; }
+  .lang-tab[data-lang="asm"].active { background: #c0392b; border-color: #c0392b; color: #fff; }
+
+  .run-btn {
+    padding: 8px 20px;
+    background: var(--accent3);
+    border: none;
+    color: #000;
+    font-family: var(--font-ui);
+    font-size: 0.85rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.15s;
+    text-transform: uppercase;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .run-btn:hover { background: #c8ff3a; transform: scale(1.03); }
+  .run-btn:active { transform: scale(0.97); }
+  .run-btn.running {
+    background: var(--accent2);
+    animation: pulse 0.6s ease infinite alternate;
+  }
+  @keyframes pulse { from { opacity: 1; } to { opacity: 0.6; } }
+
+  /* MAIN AREA */
+  .workspace {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    gap: 0;
+  }
+
+  /* EDITOR PANEL */
+  .editor-panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    border-right: 1px solid var(--border);
+  }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 14px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+
+  .panel-header .badge {
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    background: var(--surface2);
+    color: var(--accent);
+    border: 1px solid var(--border);
+  }
+
+  .editor-wrap {
+    position: relative;
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+  }
+
+  .line-numbers {
+    padding: 14px 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    min-width: 44px;
+    text-align: right;
+    padding-right: 10px;
+    padding-left: 8px;
+    overflow: hidden;
+    font-family: var(--font-code);
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--muted);
+    user-select: none;
+    flex-shrink: 0;
+  }
+
+  textarea#code-editor {
+    flex: 1;
+    background: var(--bg);
+    color: var(--text);
+    border: none;
+    outline: none;
+    font-family: var(--font-code);
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 14px 14px;
+    resize: none;
+    tab-size: 4;
+    caret-color: var(--accent);
+    white-space: pre;
+    overflow-wrap: normal;
+    overflow-x: auto;
+    overflow-y: auto;
+    width: 100%;
+  }
+
+  /* RIGHT PANEL */
+  .output-panel {
+    display: flex;
+    flex-direction: column;
+    width: 42%;
+    min-width: 280px;
+    max-width: 600px;
+    flex-shrink: 0;
+  }
+
+  /* CANVAS OUTPUT */
+  .canvas-wrap {
+    flex-shrink: 0;
+    background: #000;
+    border-bottom: 1px solid var(--border);
+    display: none;
+    overflow: hidden;
+    height: 220px;
+    position: relative;
+  }
+  .canvas-wrap.visible { display: block; }
+
+  canvas#gfx-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* CONSOLE */
+  .console-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .console-output {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 14px;
+    font-family: var(--font-code);
+    font-size: 12.5px;
+    line-height: 1.65;
+    background: var(--bg);
+  }
+
+  .console-output::-webkit-scrollbar { width: 5px; }
+  .console-output::-webkit-scrollbar-track { background: transparent; }
+  .console-output::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .console-line {
+    display: block;
+    padding: 1px 0;
+    word-break: break-all;
+    white-space: pre-wrap;
+  }
+  .console-line.info { color: var(--text); }
+  .console-line.error { color: var(--accent2); }
+  .console-line.warn { color: #f9c74f; }
+  .console-line.success { color: var(--accent3); }
+  .console-line.system { color: var(--muted); font-style: italic; }
+
+  .console-line::before { content: "> "; color: var(--muted); }
+  .console-line.error::before { content: "✗ "; color: var(--accent2); }
+  .console-line.success::before { content: "✓ "; color: var(--accent3); }
+  .console-line.system::before { content: "# "; color: var(--muted); }
+
+  /* STATUS BAR */
+  .status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 14px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+  .status-bar .status-ok { color: var(--accent3); }
+  .status-bar .status-err { color: var(--accent2); }
+
+  /* INPUT area */
+  .stdin-row {
+    display: flex;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  input#stdin-input {
+    flex: 1;
+    background: var(--surface);
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: var(--font-code);
+    font-size: 12px;
+    padding: 7px 12px;
+    border-right: 1px solid var(--border);
+  }
+  input#stdin-input::placeholder { color: var(--muted); }
+  .clear-btn {
+    padding: 7px 12px;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-family: var(--font-ui);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: color 0.15s;
+  }
+  .clear-btn:hover { color: var(--accent2); }
+
+  /* INTERACTIVE TERMINAL INPUT */
+  .terminal-input-row {
+    display: none;
+    align-items: center;
+    border-top: 2px solid var(--accent);
+    background: #0d1117;
+    flex-shrink: 0;
+    animation: inputPulse 1s ease infinite alternate;
+  }
+  .terminal-input-row.active { display: flex; }
+  @keyframes inputPulse {
+    from { border-top-color: var(--accent); }
+    to   { border-top-color: #0077aa; }
+  }
+  .terminal-prompt {
+    padding: 0 10px;
+    color: var(--accent);
+    font-family: var(--font-code);
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    user-select: none;
+  }
+  input#terminal-live-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--accent3);
+    font-family: var(--font-code);
+    font-size: 13px;
+    padding: 8px 4px;
+    caret-color: var(--accent3);
+  }
+  input#terminal-live-input::placeholder { color: #3a3f50; }
+  .terminal-send-btn {
+    padding: 8px 14px;
+    background: var(--accent);
+    border: none;
+    color: #000;
+    font-family: var(--font-ui);
+    font-size: 0.7rem;
+    font-weight: 800;
+    cursor: pointer;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: background 0.1s;
+  }
+  .terminal-send-btn:hover { background: #33eeff; }
+  .console-line.input-echo { color: var(--accent3); }
+  .console-line.input-echo::before { content: "» "; color: var(--accent); }
+
+  /* SNIPPETS */
+  .snippets-row {
+    display: flex;
+    gap: 4px;
+    padding: 6px 14px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+  .snippet-btn {
+    padding: 3px 9px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: var(--font-ui);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.12s;
+    text-transform: uppercase;
+  }
+  .snippet-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* SCROLLBAR for editor */
+  textarea::-webkit-scrollbar { width: 5px; height: 5px; }
+  textarea::-webkit-scrollbar-track { background: transparent; }
+  textarea::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  @media (max-width: 700px) {
+    .workspace { flex-direction: column; }
+    .output-panel { width: 100%; max-width: 100%; border-top: 1px solid var(--border); min-width: 0; }
+    .editor-panel { border-right: none; min-height: 200px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">POLY<span>RUN</span> <span style="font-size:0.65rem;color:var(--muted);font-weight:400;">COMPILER</span></div>
+  <div class="lang-tabs" id="lang-tabs"></div>
+  <button class="run-btn" id="run-btn" onclick="runCode()">▶ RUN</button>
+</header>
+
+<div class="workspace">
+  <!-- EDITOR -->
+  <div class="editor-panel">
+    <div class="panel-header">
+      <span id="lang-label">C#</span>
+      <span class="badge" id="mode-badge">INTERPRETED</span>
+    </div>
+    <div class="editor-wrap">
+      <div class="line-numbers" id="line-numbers">1</div>
+      <textarea id="code-editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
+    </div>
+    <div class="snippets-row" id="snippets-row"></div>
+  </div>
+
+  <!-- OUTPUT -->
+  <div class="output-panel">
+    <div class="panel-header">
+      <span>OUTPUT</span>
+      <span class="badge" id="exec-time"></span>
+    </div>
+    <div class="canvas-wrap" id="canvas-wrap">
+      <canvas id="gfx-canvas" width="600" height="220"></canvas>
+    </div>
+    <div class="console-wrap">
+      <div class="console-output" id="console-output">
+        <span class="console-line system">POLYRUN v1.0 — Multi-Language Compiler</span>
+        <span class="console-line system">Выберите язык, напишите код, нажмите RUN</span>
+      </div>
+    </div>
+    <div class="stdin-row">
+      <input id="stdin-input" type="text" placeholder="stdin (ввод для программы)...">
+      <button class="clear-btn" onclick="clearConsole()">CLR</button>
+    </div>
+    <div class="status-bar">
+      <span id="status-text">READY</span>
+      <span id="cursor-pos">Ln 1, Col 1</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  LANGUAGE DEFINITIONS
+// ═══════════════════════════════════════════════════
+const LANGUAGES = {
+  csharp: {
+    name: "C#",
+    mode: "INTERPRETED",
+    color: "#9b4dca",
+    snippets: ["Hello World", "Fibonacci", "Сортировка", "Стек", "Граф BFS", "Canvas"],
+    defaultCode: `// C# — интерпретируется в JS
+using System;
+using System.Collections.Generic;
+
+class Program {
+    static void Main() {
+        Console.WriteLine("=== C# Compiler ===");
+        
+        // Переменные и типы
+        int n = 10;
+        string name = "POLYRUN";
+        
+        // Цикл
+        Console.WriteLine($"Привет от {name}!");
+        
+        // Fibonacci
+        Console.WriteLine("Числа Фибоначчи:");
+        int a = 0, b = 1;
+        for (int i = 0; i < n; i++) {
+            Console.Write(a + " ");
+            int temp = a + b;
+            a = b;
+            b = temp;
+        }
+        Console.WriteLine();
+        
+        // Список
+        var list = new List<int> { 5, 3, 8, 1, 9, 2 };
+        list.Sort();
+        Console.WriteLine("Sorted: " + string.Join(", ", list));
+        
+        // Словарь
+        var dict = new Dictionary<string, int>();
+        dict["apple"] = 3;
+        dict["banana"] = 7;
+        foreach (var kv in dict) {
+            Console.WriteLine($"  {kv.Key} => {kv.Value}");
+        }
+    }
+}`
+  },
+
+  js: {
+    name: "JS",
+    mode: "NATIVE",
+    snippets: ["Hello World", "Fibonacci", "Canvas Stars", "QuickSort", "Async/Await", "Regex"],
+    defaultCode: `// JavaScript — нативное выполнение
+console.log("=== JavaScript ===");
+
+// Деструктуризация
+const [x, y, ...rest] = [1, 2, 3, 4, 5];
+console.log("Head:", x, y, "Rest:", rest);
+
+// Arrow functions + map/filter
+const nums = Array.from({length: 10}, (_, i) => i + 1);
+const evens = nums.filter(n => n % 2 === 0).map(n => n * n);
+console.log("Even squares:", evens.join(", "));
+
+// Рекурсия
+function fib(n) { return n <= 1 ? n : fib(n-1) + fib(n-2); }
+console.log("Fib(10) =", fib(10));
+
+// Promise
+Promise.resolve(42)
+  .then(v => v * 2)
+  .then(v => console.log("Promise result:", v));
+
+// Генераторы
+function* range(start, end) {
+  for (let i = start; i < end; i++) yield i;
+}
+console.log("Range 0..5:", [...range(0, 5)].join(" "));
+
+// Графика (canvas)
+if (typeof CANVAS !== 'undefined') {
+  const ctx = CANVAS.getContext('2d');
+  CANVAS.width = 600; CANVAS.height = 220;
+  ctx.fillStyle = '#0a0c10';
+  ctx.fillRect(0, 0, 600, 220);
+  for (let i = 0; i < 80; i++) {
+    ctx.beginPath();
+    ctx.arc(Math.random()*600, Math.random()*220, Math.random()*2+0.5, 0, Math.PI*2);
+    ctx.fillStyle = \`hsl(\${Math.random()*360},80%,70%)\`;
+    ctx.fill();
+  }
+}`
+  },
+
+  python: {
+    name: "Python",
+    mode: "INTERPRETED",
+    snippets: ["Hello World", "Fibonacci", "Список", "Словарь", "Классы", "Canvas"],
+    defaultCode: `# Python — интерпретируется в JS
+print("=== Python Interpreter ===")
+
+# Переменные
+name = "POLYRUN"
+version = 3.12
+print(f"Привет от {name} v{version}")
+
+# Списки
+nums = [3, 1, 4, 1, 5, 9, 2, 6, 5, 3]
+nums.sort()
+print("Sorted:", nums)
+
+# Генераторы списков
+squares = [x**2 for x in range(1, 8)]
+print("Squares:", squares)
+
+# Словарь
+d = {"a": 1, "b": 2, "c": 3}
+for k, v in d.items():
+    print(f"  {k}: {v}")
+
+# Функция
+def factorial(n):
+    return 1 if n <= 1 else n * factorial(n-1)
+
+for i in range(1, 8):
+    print(f"  {i}! = {factorial(i)}")
+
+# Классы
+class Stack:
+    def __init__(self):
+        self._data = []
+    def push(self, x):
+        self._data.append(x)
+    def pop(self):
+        return self._data.pop() if self._data else None
+    def __len__(self):
+        return len(self._data)
+
+s = Stack()
+for x in [10, 20, 30]:
+    s.push(x)
+print("Stack pop:", s.pop(), s.pop())`
+  },
+
+  lua: {
+    name: "Lua",
+    mode: "INTERPRETED",
+    snippets: ["Hello World", "Таблицы", "Функции", "Рекурсия"],
+    defaultCode: `-- Lua — интерпретируется в JS
+print("=== Lua Interpreter ===")
+
+-- Переменные
+local name = "POLYRUN"
+print("Привет от " .. name .. "!")
+
+-- Таблицы (аналог массива/объекта)
+local t = {10, 20, 30, 40, 50}
+for i, v in ipairs(t) do
+  print("t[" .. i .. "] = " .. v)
+end
+
+-- Функции
+local function fact(n)
+  if n <= 1 then return 1 end
+  return n * fact(n - 1)
+end
+
+for i = 1, 7 do
+  print(i .. "! = " .. fact(i))
+end
+
+-- Таблица как объект
+local obj = { name = "Obj", value = 42 }
+obj.greet = function(self)
+  return "I am " .. self.name .. " = " .. self.value
+end
+print(obj:greet())
+
+-- while
+local x = 1
+while x < 100 do x = x * 2 end
+print("x = " .. x)`
+  },
+
+  brainf: {
+    name: "BF",
+    mode: "ESOTERIC",
+    snippets: ["Hello World", "Add Two", "Counter"],
+    defaultCode: `; Brainfuck — Hello World!
+; Каждый символ: + - < > [ ] . ,
+++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.`
+  },
+
+  forth: {
+    name: "Forth",
+    mode: "STACK-BASED",
+    snippets: ["Hello World", "Fibonacci", "Factorial", "Stack Demo"],
+    defaultCode: `: SQUARE DUP * ;
+: CUBE DUP DUP * * ;
+: FACTORIAL DUP 0 = IF DROP 1 EXIT THEN DUP 1 - FACTORIAL * ;
+
+." === Forth Stack Machine ===" CR
+5 SQUARE . CR
+3 CUBE . CR
+7 FACTORIAL . CR
+
+: LOOP-TEST 1 BEGIN DUP . DUP 2 * SWAP 1 + DUP 10 > UNTIL DROP DROP ;
+LOOP-TEST CR`
+  },
+
+  whitespace: {
+    name: "WS",
+    mode: "ESOTERIC",
+    snippets: ["Hello World"],
+    defaultCode: `[Whitespace] — программа использует пробелы, табы и переносы строк
+Этот редактор показывает видимое представление.
+Нажмите "Hello World" в сниппетах для примера.
+
+Видимая запись:  S=пробел  T=таб  N=перенос
+Push 72:  SS TSSTS N  (H)
+Push 101: SS TTSTST N (e)
+...и так далее`
+  },
+
+  css: {
+    name: "CSS",
+    mode: "VISUAL",
+    snippets: ["Gradient", "Animation", "Grid", "Glassmorphism"],
+    defaultCode: `/* CSS — визуальный режим */
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0a0c10 0%, #1a0a2e 50%, #0a1628 100%);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.card {
+  padding: 40px 60px;
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  text-align: center;
+  animation: float 3s ease-in-out infinite;
+}
+
+h1 {
+  color: #00e5ff;
+  font-size: 2.5rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+p {
+  color: rgba(255,255,255,0.6);
+  margin-top: 10px;
+  font-size: 0.9rem;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-15px); }
+}`
+  },
+
+  sql: {
+    name: "SQL",
+    mode: "QUERY",
+    snippets: ["CREATE + INSERT", "SELECT JOIN", "GROUP BY", "Оконные функции"],
+    defaultCode: `-- SQL — встроенный движок (WebSQL-совместимый)
+-- Создание таблиц
+CREATE TABLE employees (
+  id INTEGER PRIMARY KEY,
+  name TEXT,
+  dept TEXT,
+  salary INTEGER
+);
+
+INSERT INTO employees VALUES (1, 'Alice',   'Engineering', 95000);
+INSERT INTO employees VALUES (2, 'Bob',     'Marketing',   72000);
+INSERT INTO employees VALUES (3, 'Carol',   'Engineering', 88000);
+INSERT INTO employees VALUES (4, 'David',   'Marketing',   68000);
+INSERT INTO employees VALUES (5, 'Eve',     'Engineering', 105000);
+INSERT INTO employees VALUES (6, 'Frank',   'HR',          61000);
+
+-- Запросы
+SELECT * FROM employees ORDER BY salary DESC;
+
+SELECT dept, COUNT(*) as count, AVG(salary) as avg_salary
+FROM employees
+GROUP BY dept
+ORDER BY avg_salary DESC;
+
+SELECT name, salary,
+  salary - AVG(salary) OVER (PARTITION BY dept) as diff_from_avg
+FROM employees;`
+  },
+
+  asm: {
+    name: "ASM",
+    mode: "VIRTUAL CPU",
+    snippets: ["Hello World", "Fibonacci", "Цикл", "Стек"],
+    defaultCode: `; Virtual x86-like Assembly
+; Регистры: AX BX CX DX SI DI SP BP
+; Инструкции: MOV ADD SUB MUL DIV INC DEC
+;             CMP JMP JE JNE JG JL PUSH POP
+;             PRINT PRINTLN HALT
+
+    MOV AX, 0        ; счётчик i = 0
+    MOV BX, 0        ; fib(n-2) = 0
+    MOV CX, 1        ; fib(n-1) = 1
+
+    PRINTLN "=== Virtual ASM: Fibonacci ==="
+
+LOOP:
+    PRINT BX
+    PRINT " "
+    MOV DX, BX       ; tmp = fib(n-2)
+    ADD DX, CX       ; tmp = fib(n-2) + fib(n-1)
+    MOV BX, CX       ; fib(n-2) = fib(n-1)
+    MOV CX, DX       ; fib(n-1) = tmp
+    INC AX
+    CMP AX, 12
+    JL LOOP
+
+    PRINTLN ""
+    PRINTLN "Done!"
+    HALT`
+  }
+};
+
+// ═══════════════════════════════════════════════════
+//  SNIPPETS
+// ═══════════════════════════════════════════════════
+const SNIPPETS = {
+  csharp: {
+    "Hello World": `using System;
+class Program {
+    static void Main() {
+        Console.WriteLine("Hello, World!");
+        Console.WriteLine("Привет, мир!");
+    }
+}`,
+    "Fibonacci": `using System;
+class Program {
+    static int Fib(int n) => n <= 1 ? n : Fib(n-1) + Fib(n-2);
+    static void Main() {
+        for (int i = 0; i < 15; i++)
+            Console.Write(Fib(i) + " ");
+        Console.WriteLine();
+    }
+}`,
+    "Сортировка": `using System;
+using System.Linq;
+class Program {
+    static void BubbleSort(int[] arr) {
+        for (int i = 0; i < arr.Length - 1; i++)
+            for (int j = 0; j < arr.Length - 1 - i; j++)
+                if (arr[j] > arr[j+1]) { int t = arr[j]; arr[j] = arr[j+1]; arr[j+1] = t; }
+    }
+    static void Main() {
+        int[] arr = {64, 34, 25, 12, 22, 11, 90};
+        Console.WriteLine("Before: " + string.Join(", ", arr));
+        BubbleSort(arr);
+        Console.WriteLine("After:  " + string.Join(", ", arr));
+    }
+}`,
+    "Стек": `using System;
+using System.Collections.Generic;
+class Program {
+    static void Main() {
+        var stack = new Stack<int>();
+        stack.Push(1); stack.Push(2); stack.Push(3);
+        Console.WriteLine("Top: " + stack.Peek());
+        while (stack.Count > 0)
+            Console.WriteLine("Pop: " + stack.Pop());
+    }
+}`,
+    "Граф BFS": `using System;
+using System.Collections.Generic;
+class Program {
+    static void BFS(Dictionary<int,List<int>> graph, int start) {
+        var visited = new HashSet<int>();
+        var queue = new Queue<int>();
+        queue.Enqueue(start); visited.Add(start);
+        while (queue.Count > 0) {
+            int node = queue.Dequeue();
+            Console.Write(node + " ");
+            foreach (var neighbor in graph[node])
+                if (!visited.Contains(neighbor)) { visited.Add(neighbor); queue.Enqueue(neighbor); }
+        }
+    }
+    static void Main() {
+        var g = new Dictionary<int,List<int>> {
+            {1, new List<int>{2,3}},
+            {2, new List<int>{1,4,5}},
+            {3, new List<int>{1,6}},
+            {4, new List<int>{2}},
+            {5, new List<int>{2}},
+            {6, new List<int>{3}}
+        };
+        Console.Write("BFS from 1: ");
+        BFS(g, 1);
+        Console.WriteLine();
+    }
+}`,
+    "Canvas": `// C# Canvas — рисуем паттерн
+CANVAS_MODE = true;
+// Рисует спираль на canvas
+for (let t = 0; t < 200; t += 0.05) {
+    let r = t * 1.5;
+    let x = 300 + r * Math.cos(t);
+    let y = 110 + r * Math.sin(t);
+    ctx.beginPath();
+    ctx.arc(x, y, 2, 0, Math.PI*2);
+    ctx.fillStyle = \`hsl(\${t*10},80%,60%)\`;
+    ctx.fill();
+}`
+  },
+
+  js: {
+    "Hello World": `console.log("Hello, World!");\nconsole.log("Привет, мир!");`,
+    "Fibonacci": `function* fibs() {
+  let [a, b] = [0, 1];
+  while (true) { yield a; [a,b]=[b,a+b]; }
+}
+const gen = fibs();
+const result = Array.from({length:15}, () => gen.next().value);
+console.log("Fibonacci:", result.join(" "));`,
+    "Canvas Stars": `if (typeof CANVAS !== 'undefined') {
+  const ctx = CANVAS.getContext('2d');
+  CANVAS.width = 600; CANVAS.height = 220;
+  ctx.fillStyle = '#000010';
+  ctx.fillRect(0, 0, 600, 220);
+  for (let i = 0; i < 200; i++) {
+    const x = Math.random()*600, y = Math.random()*220;
+    const r = Math.random()*1.5+0.3;
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+    const b = Math.floor(Math.random()*100+155);
+    ctx.fillStyle = \`rgb(\${b},\${b},255)\`;
+    ctx.fill();
+  }
+  // Draw a glowing circle
+  const grad = ctx.createRadialGradient(300,110,10,300,110,80);
+  grad.addColorStop(0,'rgba(0,229,255,0.4)');
+  grad.addColorStop(1,'rgba(0,229,255,0)');
+  ctx.fillStyle = grad;
+  ctx.beginPath(); ctx.arc(300,110,80,0,Math.PI*2); ctx.fill();
+}`,
+    "QuickSort": `function quickSort(arr) {
+  if (arr.length <= 1) return arr;
+  const pivot = arr[Math.floor(arr.length/2)];
+  const left = arr.filter(x => x < pivot);
+  const mid  = arr.filter(x => x === pivot);
+  const right= arr.filter(x => x > pivot);
+  return [...quickSort(left), ...mid, ...quickSort(right)];
+}
+const arr = [3,6,8,10,1,2,1];
+console.log("Input: ", arr.join(" "));
+console.log("Sorted:", quickSort(arr).join(" "));`,
+    "Async/Await": `async function fetchFake(id) {
+  return new Promise(res => setTimeout(() => res({id, data: "value_"+id}), 10));
+}
+(async () => {
+  const results = await Promise.all([1,2,3].map(fetchFake));
+  results.forEach(r => console.log("Got:", JSON.stringify(r)));
+})();`,
+    "Regex": `const text = "POLYRUN v1.0 started at 12:34:56 on 2026-01-15";
+const patterns = [
+  [/\d{2}:\d{2}:\d{2}/, "Time"],
+  [/\d{4}-\d{2}-\d{2}/, "Date"],
+  [/v\d+\.\d+/, "Version"]
+];
+patterns.forEach(([rx, name]) => {
+  const m = text.match(rx);
+  if (m) console.log(name + ":", m[0]);
+});`
+  },
+
+  python: {
+    "Hello World": `print("Hello, World!")\nprint("Привет, мир!")`,
+    "Fibonacci": `def fib(n):\n    a, b = 0, 1\n    for _ in range(n):\n        print(a, end=' ')\n        a, b = b, a+b\n    print()\nfib(15)`,
+    "Список": `nums = list(range(1, 11))\nprint("Original:", nums)\nprint("Squares:", [x**2 for x in nums])\nprint("Evens:", [x for x in nums if x%2==0])\nnums.reverse()\nprint("Reversed:", nums)`,
+    "Словарь": `fruits = {"apple": 3, "banana": 7, "cherry": 2}\nfor k, v in sorted(fruits.items(), key=lambda x: x[1], reverse=True):\n    print(f"  {k}: {'*' * v} ({v})")`,
+    "Классы": `class Animal:\n    def __init__(self, name, sound):\n        self.name = name\n        self.sound = sound\n    def speak(self):\n        return f"{self.name} says {self.sound}!"\n\nclass Dog(Animal):\n    def __init__(self, name):\n        super().__init__(name, "Woof")\n    def fetch(self):\n        return f"{self.name} fetches the ball!"\n\nd = Dog("Rex")\nprint(d.speak())\nprint(d.fetch())`,
+    "Canvas": `# Python canvas — рисуем фракталы концептуально
+print("Python + Canvas: Sierpinski Triangle")
+def sierpinski(n):
+    if n == 0: return ["*"]
+    smaller = sierpinski(n-1)
+    return [" "*len(smaller[0])//2 + line + " "*len(smaller[0])//2 for line in smaller] + \
+           [line + " " + line for line in smaller]
+for line in sierpinski(3):
+    print(line)`
+  },
+
+  lua: {
+    "Hello World": `print("Hello, World!")\nprint("Привет, мир!")`,
+    "Таблицы": `local t = {}\nfor i = 1, 5 do\n  t[i] = i * i\nend\nfor i, v in ipairs(t) do\n  print(i, "->", v)\nend`,
+    "Функции": `local function map(t, f)\n  local r = {}\n  for i,v in ipairs(t) do r[i] = f(v) end\n  return r\nend\nlocal nums = {1,2,3,4,5}\nlocal doubled = map(nums, function(x) return x * 2 end)\nfor _, v in ipairs(doubled) do io.write(v .. " ") end\nprint()`,
+    "Рекурсия": `local function fib(n)\n  if n <= 1 then return n end\n  return fib(n-1) + fib(n-2)\nend\nfor i = 0, 12 do\n  io.write(fib(i) .. " ")\nend\nprint()`
+  },
+
+  brainf: {
+    "Hello World": `++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.`,
+    "Add Two": `; Складывает 3+4=7, выводит символ с кодом 7+48=55 ('7')
++++>++++[<+>-]<.`,
+    "Counter": `; Выводит числа 0-9 в ASCII (48-57)
+++++++++++ [ > ++++++++ < - ] > ++++++++ . > + < [ > . < - ]`
+  },
+
+  forth: {
+    "Hello World": `." Hello, World!" CR\n." Привет, мир!" CR`,
+    "Fibonacci": `: FIB ( n -- fib(n) )\n  DUP 1 > IF\n    DUP 1 - FIB\n    SWAP 2 - FIB +\n  ELSE\n    DROP 0\n  THEN ;\n10 FIB . CR`,
+    "Factorial": `: FACTORIAL ( n -- n! )\n  DUP 1 > IF\n    DUP 1 - FACTORIAL *\n  ELSE\n    DROP 1\n  THEN ;\n7 FACTORIAL . CR`,
+    "Stack Demo": `5 3 + .    \\ 8\n10 2 / .   \\ 5\n3 DUP * .  \\ 9\n2 3 SWAP . . \\ 2 3`
+  },
+
+  whitespace: {
+    "Hello World": `   \t  \t   \n\t\n     \t\t  \t \t\n\t\n     \t\t  \t\t  \n\t\n     \t\t  \t\t  \n\t\n     \t\t  \t\t\t\t\n\t\n  \n\n\n`
+  },
+
+  css: {
+    "Gradient": `body {\n  margin: 0; height: 100vh;\n  background: linear-gradient(135deg, #667eea, #764ba2, #f64f59);\n  background-size: 400% 400%;\n  animation: gradient 4s ease infinite;\n}\n@keyframes gradient {\n  0%,100%{background-position:0% 50%}\n  50%{background-position:100% 50%}\n}`,
+    "Animation": `body { margin: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #0a0c10; }\n.box {\n  width: 80px; height: 80px;\n  background: #00e5ff;\n  border-radius: 12px;\n  animation: spin 2s linear infinite;\n}\n@keyframes spin {\n  0% { transform: rotate(0deg) scale(1); }\n  50% { transform: rotate(180deg) scale(1.5); }\n  100% { transform: rotate(360deg) scale(1); }\n}`,
+    "Grid": `body { margin: 0; padding: 20px; background: #111318; }\n.grid {\n  display: grid;\n  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));\n  gap: 10px;\n}\n.cell {\n  aspect-ratio: 1;\n  border-radius: 8px;\n  animation: appear 0.3s ease both;\n}\n@keyframes appear { from { opacity: 0; transform: scale(0); } to { opacity: 1; transform: scale(1); } }`,
+    "Glassmorphism": `body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;\n  background: linear-gradient(135deg,#0a0c10,#1a0a2e); }\n.glass {\n  padding: 40px;\n  background: rgba(255,255,255,0.08);\n  backdrop-filter: blur(20px);\n  border: 1px solid rgba(255,255,255,0.15);\n  border-radius: 20px;\n  color: white;\n  font-family: monospace;\n  font-size: 1.5rem;\n  text-align: center;\n  box-shadow: 0 8px 32px rgba(0,0,0,0.4);\n}`
+  },
+
+  sql: {
+    "CREATE + INSERT": `CREATE TABLE products (id INTEGER PRIMARY KEY, name TEXT, price REAL, qty INTEGER);\nINSERT INTO products VALUES (1,'Apple',1.20,100),(2,'Banana',0.50,200),(3,'Cherry',3.00,50);\nSELECT * FROM products;`,
+    "SELECT JOIN": `CREATE TABLE orders (id INTEGER, product_id INTEGER, amount INTEGER);\nCREATE TABLE products (id INTEGER, name TEXT, price REAL);\nINSERT INTO products VALUES (1,'Apple',1.20),(2,'Banana',0.50);\nINSERT INTO orders VALUES (1,1,5),(2,2,10),(3,1,3);\nSELECT o.id, p.name, o.amount, o.amount*p.price as total\nFROM orders o JOIN products p ON o.product_id = p.id;`,
+    "GROUP BY": `CREATE TABLE sales (product TEXT, region TEXT, amount REAL);\nINSERT INTO sales VALUES\n  ('A','North',100),('A','South',150),('B','North',200),('B','South',80),('C','North',60);\nSELECT product, SUM(amount) as total, COUNT(*) as count, AVG(amount) as avg\nFROM sales GROUP BY product ORDER BY total DESC;`,
+    "Оконные функции": `CREATE TABLE emp (name TEXT, dept TEXT, salary INTEGER);\nINSERT INTO emp VALUES\n  ('Alice','Eng',95000),('Bob','Mkt',72000),('Carol','Eng',88000),\n  ('David','Mkt',68000),('Eve','Eng',105000);\nSELECT name, dept, salary,\n  RANK() OVER (PARTITION BY dept ORDER BY salary DESC) as dept_rank\nFROM emp;`
+  },
+
+  asm: {
+    "Hello World": `    PRINTLN "Hello, World!"\n    PRINTLN "Привет, мир!"\n    HALT`,
+    "Fibonacci": `    MOV AX, 0\n    MOV BX, 1\n    MOV CX, 0\nLOOP:\n    PRINT AX\n    PRINT " "\n    MOV DX, AX\n    ADD DX, BX\n    MOV AX, BX\n    MOV BX, DX\n    INC CX\n    CMP CX, 12\n    JL LOOP\n    PRINTLN ""\n    HALT`,
+    "Цикл": `    MOV CX, 1\nFOR:\n    PRINT CX\n    PRINT " "\n    INC CX\n    CMP CX, 11\n    JL FOR\n    PRINTLN ""\n    HALT`,
+    "Стек": `    PUSH 10\n    PUSH 20\n    PUSH 30\n    POP AX\n    PRINTLN AX\n    POP BX\n    PRINTLN BX\n    ADD AX, BX\n    PRINT "Sum: "\n    PRINTLN AX\n    HALT`
+  }
+};
+
+// ═══════════════════════════════════════════════════
+//  UI INIT
+// ═══════════════════════════════════════════════════
+let currentLang = 'csharp';
+const editor = document.getElementById('code-editor');
+const output = document.getElementById('console-output');
+const canvas = document.getElementById('gfx-canvas');
+const canvasWrap = document.getElementById('canvas-wrap');
+
+function buildLangTabs() {
+  const container = document.getElementById('lang-tabs');
+  Object.entries(LANGUAGES).forEach(([key, lang]) => {
+    const btn = document.createElement('button');
+    btn.className = 'lang-tab' + (key === currentLang ? ' active' : '');
+    btn.dataset.lang = key;
+    btn.textContent = lang.name;
+    btn.onclick = () => switchLang(key);
+    container.appendChild(btn);
+  });
+}
+
+function buildSnippets(lang) {
+  const row = document.getElementById('snippets-row');
+  row.innerHTML = '';
+  const snips = SNIPPETS[lang];
+  if (!snips) return;
+  Object.keys(snips).forEach(name => {
+    const btn = document.createElement('button');
+    btn.className = 'snippet-btn';
+    btn.textContent = name;
+    btn.onclick = () => {
+      editor.value = snips[name];
+      updateLineNumbers();
+    };
+    row.appendChild(btn);
+  });
+}
+
+function switchLang(lang) {
+  currentLang = lang;
+  document.querySelectorAll('.lang-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.lang === lang);
+  });
+  const info = LANGUAGES[lang];
+  document.getElementById('lang-label').textContent = info.name;
+  document.getElementById('mode-badge').textContent = info.mode;
+  editor.value = info.defaultCode;
+  buildSnippets(lang);
+  updateLineNumbers();
+  canvasWrap.classList.remove('visible');
+}
+
+function updateLineNumbers() {
+  const lines = editor.value.split('\n').length;
+  const ln = document.getElementById('line-numbers');
+  ln.textContent = Array.from({length: lines}, (_, i) => i + 1).join('\n');
+}
+
+editor.addEventListener('input', updateLineNumbers);
+editor.addEventListener('keydown', e => {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const s = editor.selectionStart, end = editor.selectionEnd;
+    editor.value = editor.value.substring(0,s) + '    ' + editor.value.substring(end);
+    editor.selectionStart = editor.selectionEnd = s + 4;
+    updateLineNumbers();
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); runCode(); }
+});
+editor.addEventListener('keyup', updateCursor);
+editor.addEventListener('click', updateCursor);
+editor.addEventListener('scroll', () => {
+  document.getElementById('line-numbers').scrollTop = editor.scrollTop;
+});
+
+function updateCursor() {
+  const val = editor.value, pos = editor.selectionStart;
+  const lines = val.substring(0,pos).split('\n');
+  document.getElementById('cursor-pos').textContent = `Ln ${lines.length}, Col ${lines[lines.length-1].length+1}`;
+}
+
+function clearConsole() {
+  output.innerHTML = '<span class="console-line system">Console cleared</span>';
+  canvasWrap.classList.remove('visible');
+}
+
+function log(msg, type='info') {
+  const el = document.createElement('span');
+  el.className = `console-line ${type}`;
+  el.textContent = String(msg);
+  output.appendChild(el);
+  output.scrollTop = output.scrollHeight;
+}
+
+// ═══════════════════════════════════════════════════
+//  RUNNERS
+// ═══════════════════════════════════════════════════
+
+function runCode() {
+  const code = editor.value;
+  const stdin = document.getElementById('stdin-input').value;
+  const btn = document.getElementById('run-btn');
+  btn.classList.add('running');
+  btn.textContent = '⏳ RUN';
+  output.innerHTML = '';
+  canvasWrap.classList.remove('visible');
+  const t0 = performance.now();
+
+  try {
+    const runners = {
+      csharp: runCSharp,
+      js: runJS,
+      python: runPython,
+      lua: runLua,
+      brainf: runBrainfuck,
+      forth: runForth,
+      whitespace: runWhitespace,
+      css: runCSS,
+      sql: runSQL,
+      asm: runASM
+    };
+    runners[currentLang]?.(code, stdin);
+  } catch(e) {
+    log(e.message, 'error');
+    document.getElementById('status-text').innerHTML = '<span class="status-err">ERROR</span>';
+  }
+
+  const dt = (performance.now() - t0).toFixed(1);
+  document.getElementById('exec-time').textContent = dt + 'ms';
+  btn.classList.remove('running');
+  btn.textContent = '▶ RUN';
+  document.getElementById('status-text').innerHTML = '<span class="status-ok">DONE</span>';
+}
+
+// ─────────────────────────────────────────────────
+//  C# INTERPRETER
+// ─────────────────────────────────────────────────
+function runCSharp(code, stdin) {
+  // Full C# interpreter in JS
+  const output_lines = [];
+  const stdinQueue = stdin.split('\n');
+  let stdinIdx = 0;
+
+  function csConsoleWriteLine(val) { log(val === undefined ? '' : String(val)); }
+  function csConsoleWrite(val) {
+    // append to last line or create new
+    const last = output.lastElementChild;
+    if (last && last.classList.contains('info') && !last.dataset.newline) {
+      last.textContent += String(val ?? '');
+    } else {
+      const el = document.createElement('span');
+      el.className = 'console-line info';
+      el.textContent = String(val ?? '');
+      el.dataset.newline = '';
+      output.appendChild(el);
+      output.scrollTop = output.scrollHeight;
+    }
+  }
+  function csReadLine() { return stdinQueue[stdinIdx++] || ''; }
+
+  // Parse and interpret C# - comprehensive interpreter
+  const interp = new CSharpInterpreter({ writeLine: csConsoleWriteLine, write: csConsoleWrite, readLine: csReadLine });
+  interp.run(code);
+}
+
+class CSharpInterpreter {
+  constructor(io) {
+    this.io = io;
+    this.vars = {};
+    this.methods = {};
+    this.classes = {};
+  }
+
+  run(code) {
+    // Strip comments
+    code = code.replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+
+    // Extract class definitions
+    this.extractClasses(code);
+
+    // Find Main method
+    const mainMatch = code.match(/static\s+(?:void\s+)?Main\s*\([^)]*\)\s*\{([\s\S]*)\}/);
+    if (!mainMatch) {
+      // Try to run top-level
+      this.execBlock(code);
+      return;
+    }
+    this.execBlock(mainMatch[1]);
+  }
+
+  extractClasses(code) {
+    const classRe = /class\s+(\w+)(?:\s*:\s*\w+)?\s*\{([\s\S]*?)\}(?=\s*(?:class|\s*$))/g;
+    let m;
+    while ((m = classRe.exec(code)) !== null) {
+      this.classes[m[1]] = m[2];
+    }
+    // Extract methods from classes
+    const methodRe = /(?:static\s+)?(?:\w+\s+)?(\w+)\s*\(([^)]*)\)\s*\{([\s\S]*?)\}(?=\s*(?:static|\w+\s+\w+|\}))/g;
+    while ((m = methodRe.exec(code)) !== null) {
+      if (!['if','while','for','foreach'].includes(m[1])) {
+        this.methods[m[1]] = { params: m[2], body: m[3] };
+      }
+    }
+  }
+
+  execBlock(code, localVars = {}) {
+    const vars = Object.assign({}, this.vars, localVars);
+    const saved = this.vars;
+    this.vars = vars;
+    try {
+      this.executeStatements(code);
+    } finally {
+      // propagate changes to outer scope for non-local vars
+      Object.keys(saved).forEach(k => { saved[k] = this.vars[k]; });
+      this.vars = saved;
+    }
+  }
+
+  executeStatements(code) {
+    const stmts = this.splitStatements(code);
+    for (let i = 0; i < stmts.length; i++) {
+      const s = stmts[i].trim();
+      if (!s) continue;
+      const result = this.execStatement(s);
+      if (result && result.__return !== undefined) return result;
+    }
+  }
+
+  splitStatements(code) {
+    // Split by semicolons/blocks respecting nesting
+    const stmts = [];
+    let depth = 0, current = '', i = 0;
+    while (i < code.length) {
+      const ch = code[i];
+      if (ch === '{') { depth++; current += ch; }
+      else if (ch === '}') {
+        depth--;
+        current += ch;
+        if (depth === 0) { stmts.push(current); current = ''; }
+      } else if (ch === ';' && depth === 0) {
+        stmts.push(current + ';');
+        current = '';
+      } else {
+        current += ch;
+      }
+      i++;
+    }
+    if (current.trim()) stmts.push(current);
+    return stmts;
+  }
+
+  execStatement(s) {
+    s = s.trim();
+    if (!s || s === ';') return;
+
+    // Console.WriteLine / Console.Write
+    if (/^Console\.WriteLine\s*\(/.test(s)) {
+      const arg = this.extractArg(s, 'Console.WriteLine');
+      this.io.writeLine(this.evalExpr(arg));
+      return;
+    }
+    if (/^Console\.Write\s*\(/.test(s)) {
+      const arg = this.extractArg(s, 'Console.Write');
+      this.io.write(this.evalExpr(arg));
+      return;
+    }
+
+    // Return
+    if (/^return\s+/.test(s)) {
+      return { __return: this.evalExpr(s.replace(/^return\s+/, '').replace(/;$/, '')) };
+    }
+    if (/^return;$/.test(s)) return { __return: undefined };
+
+    // var/int/string/double/bool/List/Dictionary declaration
+    const declMatch = s.match(/^(?:var|int|string|double|float|bool|long|char|object)\s+(\w+)\s*(?:=\s*([\s\S]+?))?;$/);
+    if (declMatch) {
+      this.vars[declMatch[1]] = declMatch[2] ? this.evalExpr(declMatch[2]) : null;
+      return;
+    }
+
+    // List<T> var = new List<T>()
+    const listDecl = s.match(/^(?:var|List<\w+>)\s+(\w+)\s*=\s*new\s+List<\w+>\s*\(\)\s*(?:\{([^}]*)\})?\s*;$/);
+    if (listDecl) {
+      const items = listDecl[2] ? listDecl[2].split(',').map(x => this.evalExpr(x.trim())).filter(x => x !== '') : [];
+      this.vars[listDecl[1]] = { __type: 'List', data: items, Count: items.length };
+      return;
+    }
+
+    // Stack<T> var = new Stack<T>()
+    const stackDecl = s.match(/^(?:var|Stack<\w+>)\s+(\w+)\s*=\s*new\s+Stack<\w+>\s*\(\)\s*;$/);
+    if (stackDecl) {
+      this.vars[stackDecl[1]] = { __type: 'Stack', data: [] };
+      return;
+    }
+
+    // Queue<T>
+    const queueDecl = s.match(/^(?:var|Queue<\w+>)\s+(\w+)\s*=\s*new\s+Queue<\w+>\s*\(\)\s*;$/);
+    if (queueDecl) {
+      this.vars[queueDecl[1]] = { __type: 'Queue', data: [] };
+      return;
+    }
+
+    // Dictionary<K,V>
+    const dictDecl = s.match(/^(?:var|Dictionary<[^>]+>)\s+(\w+)\s*=\s*new\s+Dictionary<[^>]+>\s*\(\)\s*(?:\{([^}]*)\})?\s*;$/);
+    if (dictDecl) {
+      this.vars[dictDecl[1]] = { __type: 'Dict', data: {} };
+      return;
+    }
+
+    // HashSet<T>
+    const setDecl = s.match(/^(?:var|HashSet<\w+>)\s+(\w+)\s*=\s*new\s+HashSet<\w+>\s*\(\)\s*;$/);
+    if (setDecl) {
+      this.vars[setDecl[1]] = { __type: 'Set', data: new Set() };
+      return;
+    }
+
+    // int[] arr = { ... }
+    const arrDecl = s.match(/^(?:\w+\[\])\s+(\w+)\s*=\s*(?:new\s+\w+\[\]\s*)?\{([^}]*)\}\s*;$/);
+    if (arrDecl) {
+      this.vars[arrDecl[1]] = arrDecl[2].split(',').map(x => this.evalExpr(x.trim())).filter(x => x !== '');
+      return;
+    }
+
+    // Assignment: x = expr; x += expr; etc.
+    const assignMatch = s.match(/^([\w\[\].\->"]+)\s*([+\-*\/&|^]=|=)\s*([\s\S]+?);$/);
+    if (assignMatch && !s.startsWith('if') && !s.startsWith('while') && !s.startsWith('for')) {
+      const [, lhs, op, rhs] = assignMatch;
+      let val = this.evalExpr(rhs);
+      const cur = this.evalExpr(lhs);
+      if (op === '+=') val = (typeof cur === 'string' ? cur + String(val) : (cur||0) + val);
+      else if (op === '-=') val = (cur||0) - val;
+      else if (op === '*=') val = (cur||0) * val;
+      else if (op === '/=') val = (cur||0) / val;
+      this.setVar(lhs, val);
+      return;
+    }
+
+    // ++ / --
+    if (/^(\w+)\+\+;$/.test(s)) { const n = s.match(/^(\w+)/)[1]; this.vars[n] = (this.vars[n]||0)+1; return; }
+    if (/^(\w+)--;$/.test(s)) { const n = s.match(/^(\w+)/)[1]; this.vars[n] = (this.vars[n]||0)-1; return; }
+
+    // Method call on list/dict/stack/queue/set
+    const mcall = s.match(/^(\w+)\.(\w+)\s*\(([\s\S]*?)\)\s*;$/);
+    if (mcall) {
+      const obj = this.vars[mcall[1]];
+      const method = mcall[2];
+      const args = this.parseArgs(mcall[3]);
+      if (obj) {
+        this.callMethod(obj, method, args);
+        return;
+      }
+    }
+
+    // foreach (var x in list) { ... }
+    const foreachMatch = s.match(/^foreach\s*\(\s*(?:var|\w+)\s+(\w+)\s+in\s+([\w.]+)\s*\)\s*\{([\s\S]*)\}$/);
+    if (foreachMatch) {
+      const [, varName, iterExpr, body] = foreachMatch;
+      const iter = this.evalExpr(iterExpr);
+      const items = iter?.__type === 'List' ? iter.data :
+                    iter?.__type === 'Dict' ? Object.entries(iter.data).map(([k,v]) => ({Key:k,Value:v})) :
+                    Array.isArray(iter) ? iter : [];
+      for (const item of items) {
+        const prev = this.vars[varName];
+        this.vars[varName] = item;
+        const r = this.executeStatements(body);
+        this.vars[varName] = prev;
+        if (r?.__return) return r;
+      }
+      return;
+    }
+
+    // for (init; cond; step) { body }
+    const forMatch = s.match(/^for\s*\(([^;]*);([^;]*);([^)]*)\)\s*\{([\s\S]*)\}$/);
+    if (forMatch) {
+      const [, init, cond, step, body] = forMatch;
+      const initS = init.trim();
+      const declM = initS.match(/^(?:int|var)\s+(\w+)\s*=\s*(.+)$/);
+      if (declM) this.vars[declM[1]] = this.evalExpr(declM[2]);
+      else if (initS) this.execStatement(initS + ';');
+      let guard = 0;
+      while (this.evalExpr(cond.trim()) && guard++ < 100000) {
+        const r = this.executeStatements(body);
+        if (r?.__return) return r;
+        const stepS = step.trim();
+        if (/\+\+$/.test(stepS)) { const n = stepS.replace(/\+\+$/,'').trim(); this.vars[n] = (this.vars[n]||0)+1; }
+        else if (/--$/.test(stepS)) { const n = stepS.replace(/--$/,'').trim(); this.vars[n] = (this.vars[n]||0)-1; }
+        else this.execStatement(stepS + ';');
+      }
+      return;
+    }
+
+    // while { }
+    const whileMatch = s.match(/^while\s*\(([\s\S]+?)\)\s*\{([\s\S]*)\}$/);
+    if (whileMatch) {
+      let guard = 0;
+      while (this.evalExpr(whileMatch[1]) && guard++ < 100000) {
+        const r = this.executeStatements(whileMatch[2]);
+        if (r?.__return) return r;
+      }
+      return;
+    }
+
+    // if / else
+    const ifMatch = s.match(/^if\s*\(([\s\S]+?)\)\s*\{([\s\S]*?)\}(?:\s*else\s*(?:if\s*\([^)]*\)\s*)?\{([\s\S]*?)\})?$/);
+    if (ifMatch) {
+      if (this.evalExpr(ifMatch[1])) {
+        return this.executeStatements(ifMatch[2]);
+      } else if (ifMatch[3]) {
+        return this.executeStatements(ifMatch[3]);
+      }
+      return;
+    }
+
+    // Method call (standalone)
+    const standalone = s.match(/^(\w+)\s*\(([\s\S]*?)\)\s*;$/);
+    if (standalone && this.methods[standalone[1]]) {
+      this.callUserMethod(standalone[1], this.parseArgs(standalone[2]));
+    }
+  }
+
+  callMethod(obj, method, args) {
+    if (obj.__type === 'List') {
+      if (method === 'Add') { obj.data.push(args[0]); obj.Count = obj.data.length; }
+      else if (method === 'Remove') { const i = obj.data.indexOf(args[0]); if(i>=0) obj.data.splice(i,1); obj.Count = obj.data.length; }
+      else if (method === 'Sort') { obj.data.sort((a,b) => a-b); }
+      else if (method === 'Reverse') { obj.data.reverse(); }
+    }
+    if (obj.__type === 'Stack') {
+      if (method === 'Push') obj.data.push(args[0]);
+      else if (method === 'Pop') return obj.data.pop();
+      else if (method === 'Peek') return obj.data[obj.data.length-1];
+    }
+    if (obj.__type === 'Queue') {
+      if (method === 'Enqueue') obj.data.push(args[0]);
+      else if (method === 'Dequeue') return obj.data.shift();
+    }
+    if (obj.__type === 'Set') {
+      if (method === 'Add') obj.data.add(args[0]);
+      else if (method === 'Contains') return obj.data.has(args[0]);
+    }
+    if (obj.__type === 'Dict') {
+      if (method === 'Add') obj.data[args[0]] = args[1];
+      else if (method === 'ContainsKey') return args[0] in obj.data;
+    }
+  }
+
+  callUserMethod(name, args) {
+    const m = this.methods[name];
+    if (!m) return undefined;
+    const paramNames = m.params.split(',').map(p => p.trim().replace(/^\w+\s+/, ''));
+    const localVars = {};
+    paramNames.forEach((p, i) => { if (p) localVars[p] = args[i]; });
+    const saved = this.vars;
+    this.vars = Object.assign({}, saved, localVars);
+    const r = this.executeStatements(m.body);
+    this.vars = saved;
+    return r?.__return;
+  }
+
+  parseArgs(s) {
+    if (!s.trim()) return [];
+    const args = [];
+    let depth = 0, cur = '', i = 0;
+    while (i < s.length) {
+      const ch = s[i];
+      if (ch === '(' || ch === '[' || ch === '{') { depth++; cur += ch; }
+      else if (ch === ')' || ch === ']' || ch === '}') { depth--; cur += ch; }
+      else if (ch === ',' && depth === 0) { args.push(this.evalExpr(cur.trim())); cur = ''; }
+      else cur += ch;
+      i++;
+    }
+    if (cur.trim()) args.push(this.evalExpr(cur.trim()));
+    return args;
+  }
+
+  extractArg(s, method) {
+    const inner = s.substring(method.length + 1, s.lastIndexOf(')'));
+    return inner;
+  }
+
+  setVar(lhs, val) {
+    // handle dict/array indexer
+    const idxMatch = lhs.match(/^(\w+)\[(.+)\]$/);
+    if (idxMatch) {
+      const obj = this.vars[idxMatch[1]];
+      const key = this.evalExpr(idxMatch[2]);
+      if (obj?.__type === 'Dict') obj.data[key] = val;
+      else if (Array.isArray(obj)) obj[key] = val;
+      return;
+    }
+    const dotMatch = lhs.match(/^(\w+)\.(\w+)$/);
+    if (dotMatch) {
+      const obj = this.vars[dotMatch[1]];
+      if (obj && typeof obj === 'object') obj[dotMatch[2]] = val;
+      return;
+    }
+    this.vars[lhs] = val;
+  }
+
+  evalExpr(expr) {
+    if (expr === undefined || expr === null) return null;
+    expr = String(expr).trim();
+    if (!expr) return '';
+
+    // null / true / false
+    if (expr === 'null') return null;
+    if (expr === 'true') return true;
+    if (expr === 'false') return false;
+
+    // String literal
+    if (/^"([\s\S]*)"$/.test(expr)) {
+      return expr.slice(1,-1).replace(/\\n/g,'\n').replace(/\\t/g,'\t');
+    }
+
+    // Char literal
+    if (/^'.'$/.test(expr)) return expr[1];
+
+    // Number
+    if (/^-?\d+(\.\d+)?$/.test(expr)) return parseFloat(expr);
+
+    // String interpolation $"..."
+    if (/^\$"([\s\S]*)"$/.test(expr)) {
+      let s = expr.slice(2,-1);
+      s = s.replace(/\{([^}]+)\}/g, (_, e) => {
+        const v = this.evalExpr(e.trim());
+        return this.csToString(v);
+      });
+      return s.replace(/\\n/g,'\n').replace(/\\t/g,'\t');
+    }
+
+    // Array/List index: arr[i]
+    const idxMatch = expr.match(/^(\w+)\[(.+)\]$/);
+    if (idxMatch) {
+      const obj = this.vars[idxMatch[1]];
+      const key = this.evalExpr(idxMatch[2]);
+      if (obj?.__type === 'Dict') return obj.data[key];
+      if (obj?.__type === 'List') return obj.data[key];
+      if (Array.isArray(obj)) return obj[key];
+    }
+
+    // Member access: obj.Prop
+    const dotMatch = expr.match(/^(\w+)\.([\w]+)(?:\s*\(([^)]*)\))?$/);
+    if (dotMatch) {
+      const obj = this.vars[dotMatch[1]];
+      const prop = dotMatch[2];
+      const callArgs = dotMatch[3];
+
+      // Static methods
+      if (dotMatch[1] === 'string') {
+        if (prop === 'Join' && callArgs !== undefined) {
+          const args = this.parseArgs(callArgs);
+          const sep = args[0];
+          const items = args[1];
+          const arr = items?.__type === 'List' ? items.data : Array.isArray(items) ? items : [];
+          return arr.map(x => this.csToString(x)).join(sep);
+        }
+      }
+      if (dotMatch[1] === 'Console') {
+        if (prop === 'ReadLine') return this.io.readLine ? this.io.readLine() : '';
+      }
+      if (dotMatch[1] === 'Math') {
+        const arg = callArgs !== undefined ? this.evalExpr(callArgs) : 0;
+        const fns = { Abs: Math.abs, Sqrt: Math.sqrt, Floor: Math.floor, Ceiling: Math.ceil, Round: Math.round, Log: Math.log, Sin: Math.sin, Cos: Math.cos };
+        if (fns[prop]) return fns[prop](arg);
+        if (prop === 'Max' || prop === 'Min') {
+          const args = this.parseArgs(callArgs);
+          return prop === 'Max' ? Math.max(...args) : Math.min(...args);
+        }
+        if (prop === 'Pow') { const a = this.parseArgs(callArgs); return Math.pow(a[0],a[1]); }
+        if (prop === 'PI') return Math.PI;
+      }
+
+      if (obj !== undefined) {
+        // Properties
+        if (prop === 'Length' && (Array.isArray(obj) || typeof obj === 'string')) return obj.length;
+        if (prop === 'Count') {
+          if (obj?.__type === 'List') return obj.data.length;
+          if (obj?.__type === 'Stack') return obj.data.length;
+          if (obj?.__type === 'Queue') return obj.data.length;
+          if (obj?.__type === 'Dict') return Object.keys(obj.data).length;
+          if (obj?.__type === 'Set') return obj.data.size;
+        }
+        if (prop === 'Key') return obj.Key;
+        if (prop === 'Value') return obj.Value;
+        if (prop === 'Keys' && obj?.__type === 'Dict') return { __type:'List', data: Object.keys(obj.data) };
+        if (prop === 'Values' && obj?.__type === 'Dict') return { __type:'List', data: Object.values(obj.data) };
+
+        // Methods
+        if (callArgs !== undefined) {
+          const args = this.parseArgs(callArgs);
+          if (typeof obj === 'string') {
+            if (prop === 'ToUpper') return obj.toUpperCase();
+            if (prop === 'ToLower') return obj.toLowerCase();
+            if (prop === 'Trim') return obj.trim();
+            if (prop === 'Length') return obj.length;
+            if (prop === 'Contains') return obj.includes(String(args[0]));
+            if (prop === 'StartsWith') return obj.startsWith(String(args[0]));
+            if (prop === 'EndsWith') return obj.endsWith(String(args[0]));
+            if (prop === 'Replace') return obj.replace(new RegExp(String(args[0]).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g'), String(args[1]));
+            if (prop === 'Split') return obj.split(args[0]);
+            if (prop === 'Substring') return obj.substring(args[0], args[1] !== undefined ? args[0]+args[1] : undefined);
+            if (prop === 'IndexOf') return obj.indexOf(String(args[0]));
+          }
+          if (Array.isArray(obj)) {
+            if (prop === 'Sort') { obj.sort((a,b)=>a-b); return obj; }
+            if (prop === 'Reverse') { obj.reverse(); return obj; }
+            if (prop === 'Contains') return obj.includes(args[0]);
+          }
+          if (obj?.__type === 'List') {
+            if (prop === 'Sort') { obj.data.sort((a,b)=>a-b); return; }
+            if (prop === 'Contains') return obj.data.includes(args[0]);
+            if (prop === 'Add') { obj.data.push(args[0]); obj.Count = obj.data.length; return; }
+            if (prop === 'Remove') { const i=obj.data.indexOf(args[0]); if(i>=0)obj.data.splice(i,1); obj.Count = obj.data.length; return; }
+            if (prop === 'Count') return obj.data.length;
+          }
+          if (obj?.__type === 'Stack') {
+            if (prop === 'Push') { obj.data.push(args[0]); return; }
+            if (prop === 'Pop') return obj.data.pop();
+            if (prop === 'Peek') return obj.data[obj.data.length-1];
+            if (prop === 'Count') return obj.data.length;
+          }
+          if (obj?.__type === 'Queue') {
+            if (prop === 'Enqueue') { obj.data.push(args[0]); return; }
+            if (prop === 'Dequeue') return obj.data.shift();
+            if (prop === 'Count') return obj.data.length;
+          }
+          if (obj?.__type === 'Dict') {
+            if (prop === 'ContainsKey') return args[0] in obj.data;
+            if (prop === 'ContainsValue') return Object.values(obj.data).includes(args[0]);
+            if (prop === 'Add') { obj.data[args[0]] = args[1]; return; }
+            if (prop === 'Remove') { delete obj.data[args[0]]; return; }
+            if (prop === 'TryGetValue') return args[0] in obj.data;
+          }
+          if (obj?.__type === 'Set') {
+            if (prop === 'Add') { obj.data.add(args[0]); return; }
+            if (prop === 'Contains') return obj.data.has(args[0]);
+            if (prop === 'Remove') { obj.data.delete(args[0]); return; }
+          }
+        }
+      }
+
+      // Enum/static
+      if (!obj && prop !== undefined) {
+        const v = this.vars[dotMatch[1]];
+        if (v !== undefined) return v?.[prop];
+      }
+    }
+
+    // Method call with args: Method(args)
+    const methodCallMatch = expr.match(/^(\w+)\s*\(([\s\S]*)\)$/);
+    if (methodCallMatch) {
+      const name = methodCallMatch[1];
+      const args = this.parseArgs(methodCallMatch[2]);
+
+      if (name === 'Convert') return null;
+
+      // int.Parse, etc.
+      if (['int', 'double', 'float', 'long'].includes(name)) return parseFloat(args[0]);
+
+      // string.Join  
+      if (name === 'string') return String(args[0]);
+
+      // User methods
+      if (this.methods[name]) return this.callUserMethod(name, args);
+    }
+
+    // new List<T> { ... }
+    const newListLit = expr.match(/^new\s+List<\w+>\s*\(\)\s*\{([^}]*)\}$/);
+    if (newListLit) {
+      const items = newListLit[1].split(',').map(x => this.evalExpr(x.trim())).filter(x => x !== '');
+      return { __type: 'List', data: items, Count: items.length };
+    }
+
+    // new int[] { ... }
+    const newArr = expr.match(/^new\s+\w+\[\]\s*\{([^}]*)\}$/);
+    if (newArr) {
+      return newArr[1].split(',').map(x => this.evalExpr(x.trim())).filter(x => x !== '');
+    }
+
+    // Ternary: a ? b : c
+    const ternary = this.parseTernary(expr);
+    if (ternary) return this.evalExpr(ternary.cond) ? this.evalExpr(ternary.then) : this.evalExpr(ternary.else);
+
+    // Binary operators (evaluated via JS for safety)
+    try {
+      return this.evalBinary(expr);
+    } catch(e) {}
+
+    // Variable lookup
+    if (/^\w+$/.test(expr) && expr in this.vars) return this.vars[expr];
+
+    return expr;
+  }
+
+  parseTernary(expr) {
+    let depth = 0;
+    for (let i = 0; i < expr.length; i++) {
+      if ('([{'.includes(expr[i])) depth++;
+      else if (')]}'.includes(expr[i])) depth--;
+      else if (expr[i] === '?' && depth === 0) {
+        const cond = expr.substring(0, i).trim();
+        const rest = expr.substring(i+1);
+        let depth2 = 0;
+        for (let j = 0; j < rest.length; j++) {
+          if ('([{'.includes(rest[j])) depth2++;
+          else if (')]}'.includes(rest[j])) depth2--;
+          else if (rest[j] === ':' && depth2 === 0) {
+            return { cond, then: rest.substring(0,j).trim(), else: rest.substring(j+1).trim() };
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  evalBinary(expr) {
+    // Replace known variables with their values for JS eval
+    let jsExpr = expr;
+
+    // String concatenation with +
+    const self = this;
+
+    // Try to parse as arithmetic/comparison
+    // Replace variables
+    jsExpr = jsExpr.replace(/\b([a-zA-Z_]\w*)\b/g, (m) => {
+      if (m in this.vars) {
+        const v = this.vars[m];
+        if (v === null) return 'null';
+        if (typeof v === 'string') return JSON.stringify(v);
+        if (typeof v === 'boolean') return v;
+        if (typeof v === 'number') return v;
+        if (v?.__type === 'List') return JSON.stringify(v.data);
+        return JSON.stringify(v);
+      }
+      // Built-in constants
+      if (m === 'Math') return 'Math';
+      if (m === 'true') return 'true';
+      if (m === 'false') return 'false';
+      if (m === 'null') return 'null';
+      return m;
+    });
+
+    // Replace && with &&, || with ||
+    // Eval safely
+    try {
+      // eslint-disable-next-line no-new-func
+      return Function('"use strict"; return (' + jsExpr + ')')();
+    } catch(e) {
+      return expr;
+    }
+  }
+
+  csToString(val) {
+    if (val === null || val === undefined) return '';
+    if (val?.__type === 'List') return '[' + val.data.map(x=>this.csToString(x)).join(', ') + ']';
+    if (val?.__type === 'Dict') return '{' + Object.entries(val.data).map(([k,v])=>k+':'+this.csToString(v)).join(', ') + '}';
+    return String(val);
+  }
+}
+
+// ─────────────────────────────────────────────────
+//  JAVASCRIPT
+// ─────────────────────────────────────────────────
+function runJS(code, stdin) {
+  const oldLog = console.log, oldError = console.error, oldWarn = console.warn;
+  const ctx = canvas.getContext('2d');
+  const canvasVisible = /CANVAS|ctx\.|getContext/.test(code);
+  if (canvasVisible) {
+    canvasWrap.classList.add('visible');
+    canvas.width = 600; canvas.height = 220;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0,0,600,220);
+  }
+
+  console.log = (...a) => log(a.map(x => JSON.stringify(x)).join(' '), 'info');
+  console.error = (...a) => log(a.map(x => JSON.stringify(x)).join(' '), 'error');
+  console.warn = (...a) => log(a.map(x => JSON.stringify(x)).join(' '), 'warn');
+
+  try {
+    // eslint-disable-next-line no-new-func
+    const fn = new Function('CANVAS', 'ctx', code);
+    fn(canvasVisible ? canvas : undefined, canvasVisible ? ctx : undefined);
+  } catch(e) {
+    log(e.toString(), 'error');
+  }
+
+  console.log = oldLog;
+  console.error = oldError;
+  console.warn = oldWarn;
+}
+
+// ─────────────────────────────────────────────────
+//  PYTHON INTERPRETER
+// ─────────────────────────────────────────────────
+function runPython(code, stdin) {
+  const interp = new PythonInterpreter(log, stdin);
+  interp.run(code);
+}
+
+class PythonInterpreter {
+  constructor(logFn, stdin) {
+    this.log = logFn;
+    this.vars = { True: true, False: false, None: null };
+    this.functions = {};
+    this.classes = {};
+    this.stdinLines = stdin.split('\n');
+    this.stdinIdx = 0;
+    this.output = [];
+    this.outputBuf = '';
+  }
+
+  run(code) {
+    const lines = code.split('\n');
+    this.execute(lines, 0, 0);
+  }
+
+  flushBuf() {
+    if (this.outputBuf !== '') { this.log(this.outputBuf, 'info'); this.outputBuf = ''; }
+  }
+
+  pyPrint(args, kwargs) {
+    const end = (kwargs && kwargs.end !== undefined) ? kwargs.end : '\n';
+    const sep = (kwargs && kwargs.sep !== undefined) ? kwargs.sep : ' ';
+    const s = args.map(a => this.pyStr(a)).join(sep);
+    if (end === '\n') {
+      this.log(this.outputBuf + s, 'info');
+      this.outputBuf = '';
+    } else {
+      this.outputBuf += s + (end || '');
+    }
+  }
+
+  pyStr(val) {
+    if (val === null) return 'None';
+    if (val === true) return 'True';
+    if (val === false) return 'False';
+    if (Array.isArray(val)) return '[' + val.map(x=>this.pyStr(x)).join(', ') + ']';
+    if (val instanceof Set) return '{' + [...val].map(x=>this.pyStr(x)).join(', ') + '}';
+    if (typeof val === 'object' && val !== null && !Array.isArray(val) && !(val instanceof Set)) {
+      return '{' + Object.entries(val).map(([k,v]) => this.pyStr(k)+': '+this.pyStr(v)).join(', ') + '}';
+    }
+    return String(val);
+  }
+
+  execute(lines, startLine, indent) {
+    let i = startLine;
+    while (i < lines.length) {
+      const line = lines[i];
+      const lineIndent = line.search(/\S/);
+      if (lineIndent === -1) { i++; continue; }
+      if (lineIndent < indent) return { line: i };
+
+      const stripped = line.trim();
+      if (!stripped || stripped.startsWith('#')) { i++; continue; }
+
+      // def
+      if (/^def\s+(\w+)\s*\(([^)]*)\)\s*:$/.test(stripped)) {
+        const m = stripped.match(/^def\s+(\w+)\s*\(([^)]*)\)\s*:/);
+        const bodyLines = [];
+        const funcIndent = lineIndent + 4;
+        let j = i + 1;
+        while (j < lines.length) {
+          const li = lines[j].search(/\S/);
+          if (li !== -1 && li <= lineIndent) break;
+          bodyLines.push(lines[j]);
+          j++;
+        }
+        this.functions[m[1]] = { params: m[2].split(',').map(p=>p.trim()).filter(Boolean), body: bodyLines, indent: funcIndent };
+        i = j;
+        continue;
+      }
+
+      // class
+      if (/^class\s+(\w+)/.test(stripped)) {
+        i++;
+        while (i < lines.length) {
+          const li = lines[i].search(/\S/);
+          if (li !== -1 && li <= lineIndent) break;
+          i++;
+        }
+        continue;
+      }
+
+      // if/elif/else
+      if (/^if\s+.+:$/.test(stripped)) {
+        const cond = stripped.slice(3, -1).trim();
+        const bodyLines = [];
+        const bodyIndent = lineIndent + 4;
+        let j = i + 1;
+        while (j < lines.length) {
+          const li = lines[j].search(/\S/);
+          if (li !== -1 && li <= lineIndent) break;
+          bodyLines.push(lines[j]);
+          j++;
+        }
+        if (this.evalPy(cond)) {
+          this.execute(bodyLines, 0, bodyIndent);
+        }
+        i = j;
+        continue;
+      }
+
+      // for x in ...:
+      if (/^for\s+\w+\s+in\s+.+:$/.test(stripped)) {
+        const m = stripped.match(/^for\s+(\w+)\s+in\s+(.+):$/);
+        const varName = m[1], iterExpr = m[2];
+        const bodyLines = [];
+        let j = i + 1;
+        while (j < lines.length) {
+          const li = lines[j].search(/\S/);
+          if (li !== -1 && li <= lineIndent) break;
+          bodyLines.push(lines[j]);
+          j++;
+        }
+        const iterable = this.evalPy(iterExpr);
+        const arr = Array.isArray(iterable) ? iterable :
+                    iterable instanceof Set ? [...iterable] :
+                    typeof iterable === 'object' ? Object.keys(iterable) : [];
+        for (const item of arr) {
+          this.vars[varName] = item;
+          this.execute(bodyLines, 0, lineIndent + 4);
+        }
+        i = j;
+        continue;
+      }
+
+      // while
+      if (/^while\s+.+:$/.test(stripped)) {
+        const cond = stripped.slice(6,-1).trim();
+        const bodyLines = [];
+        let j = i + 1;
+        while (j < lines.length) {
+          const li = lines[j].search(/\S/);
+          if (li !== -1 && li <= lineIndent) break;
+          bodyLines.push(lines[j]);
+          j++;
+        }
+        let guard = 0;
+        while (this.evalPy(cond) && guard++ < 100000) {
+          this.execute(bodyLines, 0, lineIndent + 4);
+        }
+        i = j;
+        continue;
+      }
+
+      // print(...)
+      if (/^print\s*\(/.test(stripped)) {
+        const inner = stripped.replace(/^print\s*\(/, '').replace(/\)\s*$/, '');
+        const args = this.parsePyArgs(inner);
+        this.pyPrint(args.map(a => this.evalPy(a)));
+        i++; continue;
+      }
+
+      // assignment
+      const assignM = stripped.match(/^(\w+)\s*(?:\[([^\]]+)\])?\s*([+\-*\/]?=)\s*(.+)$/);
+      if (assignM && !stripped.startsWith('if') && !stripped.startsWith('while') && !stripped.startsWith('for') && !stripped.startsWith('def')) {
+        const [, varName, idx, op, rhs] = assignM;
+        let val = this.evalPy(rhs);
+        if (idx !== undefined) {
+          const obj = this.vars[varName];
+          const key = this.evalPy(idx);
+          if (Array.isArray(obj)) obj[key] = val;
+          else if (obj && typeof obj === 'object') obj[key] = val;
+        } else {
+          const cur = this.vars[varName];
+          if (op === '+=') val = (typeof cur === 'string' ? cur + String(val) : (cur||0) + val);
+          else if (op === '-=') val = (cur||0) - val;
+          else if (op === '*=') val = (cur||0) * val;
+          else if (op === '/=') val = (cur||0) / val;
+          this.vars[varName] = val;
+        }
+        i++; continue;
+      }
+
+      // expression as statement
+      try { this.evalPy(stripped); } catch(e) { this.log('Error: ' + e.message, 'error'); }
+      i++;
+    }
+    this.flushBuf();
+    return {};
+  }
+
+  parsePyArgs(s) {
+    if (!s.trim()) return [];
+    const args = [];
+    let depth = 0, cur = '', i = 0;
+    while (i < s.length) {
+      const ch = s[i];
+      if ('([{'.includes(ch)) { depth++; cur += ch; }
+      else if (')]}'.includes(ch)) { depth--; cur += ch; }
+      else if (ch === ',' && depth === 0) { args.push(cur.trim()); cur = ''; }
+      else cur += ch;
+      i++;
+    }
+    if (cur.trim()) args.push(cur.trim());
+    return args;
+  }
+
+  evalPy(expr) {
+    expr = String(expr).trim();
+    if (!expr) return null;
+    if (expr === 'None') return null;
+    if (expr === 'True') return true;
+    if (expr === 'False') return false;
+    if (/^-?\d+(\.\d+)?$/.test(expr)) return parseFloat(expr);
+
+    // f-string
+    if (/^f["']/.test(expr)) {
+      const q = expr[1];
+      let s = expr.slice(2,-1);
+      s = s.replace(/\{([^}]+)\}/g, (_, e) => {
+        const v = this.evalPy(e.trim());
+        return this.pyStr(v);
+      });
+      return s;
+    }
+
+    // String
+    if (/^["'].*["']$/.test(expr)) return expr.slice(1,-1).replace(/\\n/g,'\n').replace(/\\t/g,'\t');
+
+    // List literal
+    if (/^\[.*\]$/.test(expr)) {
+      const inner = expr.slice(1,-1);
+      if (!inner.trim()) return [];
+      // Check for list comprehension
+      const compMatch = inner.match(/^(.+)\s+for\s+(\w+)\s+in\s+(.+?)(?:\s+if\s+(.+))?$/);
+      if (compMatch) {
+        const [, mapExpr, varName, iterExpr, condExpr] = compMatch;
+        const iterable = this.evalPy(iterExpr);
+        const arr = Array.isArray(iterable) ? iterable : typeof iterable === 'object' && iterable ? Object.keys(iterable) : [];
+        const result = [];
+        const prevVar = this.vars[varName];
+        for (const item of arr) {
+          this.vars[varName] = item;
+          if (!condExpr || this.evalPy(condExpr)) result.push(this.evalPy(mapExpr));
+        }
+        this.vars[varName] = prevVar;
+        return result;
+      }
+      return this.parsePyArgs(inner).map(a => this.evalPy(a));
+    }
+
+    // Dict literal
+    if (/^\{.*\}$/.test(expr)) {
+      const inner = expr.slice(1,-1);
+      if (!inner.trim()) return {};
+      const result = {};
+      const pairs = this.parsePyArgs(inner);
+      pairs.forEach(pair => {
+        const colonIdx = pair.indexOf(':');
+        if (colonIdx >= 0) {
+          const k = this.evalPy(pair.substring(0, colonIdx).trim());
+          const v = this.evalPy(pair.substring(colonIdx + 1).trim());
+          result[k] = v;
+        }
+      });
+      return result;
+    }
+
+    // Tuple
+    if (/^\(.*\)$/.test(expr)) {
+      return this.parsePyArgs(expr.slice(1,-1)).map(a => this.evalPy(a));
+    }
+
+    // range(...)
+    if (/^range\(/.test(expr)) {
+      const args = this.parsePyArgs(expr.slice(6,-1)).map(a => parseFloat(this.evalPy(a)));
+      const [start, end, step] = args.length === 1 ? [0, args[0], 1] : args.length === 2 ? [args[0], args[1], 1] : args;
+      const result = [];
+      for (let i = start; step > 0 ? i < end : i > end; i += step) result.push(i);
+      return result;
+    }
+
+    // len(...)
+    if (/^len\(/.test(expr)) {
+      const v = this.evalPy(expr.slice(4,-1));
+      return Array.isArray(v) ? v.length : typeof v === 'string' ? v.length : typeof v === 'object' && v ? Object.keys(v).length : 0;
+    }
+
+    // list/tuple/str/int/float/bool conversions
+    if (/^list\(/.test(expr)) { const v = this.evalPy(expr.slice(5,-1)); return Array.isArray(v) ? v : typeof v === 'string' ? [...v] : []; }
+    if (/^str\(/.test(expr)) { return this.pyStr(this.evalPy(expr.slice(4,-1))); }
+    if (/^int\(/.test(expr)) { return parseInt(this.evalPy(expr.slice(4,-1))); }
+    if (/^float\(/.test(expr)) { return parseFloat(this.evalPy(expr.slice(6,-1))); }
+    if (/^bool\(/.test(expr)) { const v = this.evalPy(expr.slice(5,-1)); return Boolean(v); }
+    if (/^abs\(/.test(expr)) { return Math.abs(this.evalPy(expr.slice(4,-1))); }
+    if (/^sorted\(/.test(expr)) { const v = this.evalPy(expr.slice(7,-1)); return Array.isArray(v) ? [...v].sort((a,b)=>a-b) : []; }
+    if (/^reversed\(/.test(expr)) { const v = this.evalPy(expr.slice(9,-1)); return Array.isArray(v) ? [...v].reverse() : []; }
+    if (/^sum\(/.test(expr)) { const v = this.evalPy(expr.slice(4,-1)); return Array.isArray(v) ? v.reduce((a,b)=>a+b,0) : 0; }
+    if (/^max\(/.test(expr)) { const args = this.parsePyArgs(expr.slice(4,-1)).map(a=>this.evalPy(a)); return args.length===1 && Array.isArray(args[0]) ? Math.max(...args[0]) : Math.max(...args); }
+    if (/^min\(/.test(expr)) { const args = this.parsePyArgs(expr.slice(4,-1)).map(a=>this.evalPy(a)); return args.length===1 && Array.isArray(args[0]) ? Math.min(...args[0]) : Math.min(...args); }
+    if (/^input\(/.test(expr)) { return this.stdinLines[this.stdinIdx++] || ''; }
+    if (/^print\(/.test(expr)) { const args = this.parsePyArgs(expr.slice(6,-1)); this.pyPrint(args.map(a=>this.evalPy(a))); return null; }
+
+    // method calls: obj.method(args)
+    const dotCallM = expr.match(/^(.+?)\.(\w+)\s*\((.*)\)$/);
+    if (dotCallM) {
+      const obj = this.evalPy(dotCallM[1]);
+      const method = dotCallM[2];
+      const args = this.parsePyArgs(dotCallM[3]).map(a => this.evalPy(a));
+      if (Array.isArray(obj)) {
+        if (method === 'append') { obj.push(args[0]); return null; }
+        if (method === 'extend') { obj.push(...(args[0]||[])); return null; }
+        if (method === 'sort') { obj.sort((a,b)=>a-b); return null; }
+        if (method === 'reverse') { obj.reverse(); return null; }
+        if (method === 'pop') { return obj.pop(); }
+        if (method === 'count') { return obj.filter(x=>x===args[0]).length; }
+        if (method === 'index') { return obj.indexOf(args[0]); }
+        if (method === 'remove') { const i = obj.indexOf(args[0]); if(i>=0) obj.splice(i,1); return null; }
+        if (method === 'join') { return args[0].map(x=>this.pyStr(x)).join(obj.join('')); }
+      }
+      if (typeof obj === 'string') {
+        if (method === 'upper') return obj.toUpperCase();
+        if (method === 'lower') return obj.toLowerCase();
+        if (method === 'strip') return obj.trim();
+        if (method === 'split') return obj.split(args[0] || ' ');
+        if (method === 'replace') return obj.replace(new RegExp(String(args[0]).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g'), String(args[1]||''));
+        if (method === 'join') return (Array.isArray(args[0]) ? args[0] : []).map(x=>this.pyStr(x)).join(obj);
+        if (method === 'startswith') return obj.startsWith(String(args[0]));
+        if (method === 'endswith') return obj.endsWith(String(args[0]));
+        if (method === 'count') return obj.split(String(args[0])).length - 1;
+        if (method === 'find') return obj.indexOf(String(args[0]));
+        if (method === 'format') {
+          let s = obj;
+          args.forEach((a,i) => { s = s.replace('{}', this.pyStr(a)).replace('{'+i+'}', this.pyStr(a)); });
+          return s;
+        }
+      }
+      if (obj && typeof obj === 'object') {
+        if (method === 'items') return Object.entries(obj);
+        if (method === 'keys') return Object.keys(obj);
+        if (method === 'values') return Object.values(obj);
+        if (method === 'get') return obj[args[0]] !== undefined ? obj[args[0]] : (args[1] !== undefined ? args[1] : null);
+        if (method === 'pop') { const v = obj[args[0]]; delete obj[args[0]]; return v; }
+        if (method === 'update') { if(args[0]) Object.assign(obj, args[0]); return null; }
+      }
+    }
+
+    // attribute: obj.attr
+    const dotAttrM = expr.match(/^(.+?)\.(\w+)$/);
+    if (dotAttrM) {
+      const obj = this.evalPy(dotAttrM[1]);
+      const attr = dotAttrM[2];
+      if (typeof obj === 'string' && attr === 'upper') return obj.toUpperCase;
+      if (Array.isArray(obj) && attr === 'count') return obj.length;
+      if (obj && typeof obj === 'object') return obj[attr];
+      if (typeof obj === 'string') {
+        if (attr === 'upper') return () => obj.toUpperCase();
+        if (attr === 'lower') return () => obj.toLowerCase();
+      }
+    }
+
+    // index: obj[key]
+    const idxM = expr.match(/^(.+?)\[(.+)\]$/);
+    if (idxM) {
+      const obj = this.evalPy(idxM[1]);
+      const key = this.evalPy(idxM[2]);
+      if (Array.isArray(obj)) return key < 0 ? obj[obj.length+key] : obj[key];
+      if (typeof obj === 'string') return key < 0 ? obj[obj.length+key] : obj[key];
+      if (obj && typeof obj === 'object') return obj[key];
+    }
+
+    // Function call
+    const funcM = expr.match(/^(\w+)\s*\(([\s\S]*)\)$/);
+    if (funcM && this.functions[funcM[1]]) {
+      const fn = this.functions[funcM[1]];
+      const argVals = this.parsePyArgs(funcM[2]).map(a => this.evalPy(a));
+      const savedVars = Object.assign({}, this.vars);
+      fn.params.forEach((p, i) => { this.vars[p] = argVals[i] !== undefined ? argVals[i] : null; });
+      let returnVal = null;
+      const result = this.execute(fn.body, 0, fn.indent);
+      if (result && result.__return !== undefined) returnVal = result.__return;
+      Object.assign(this.vars, savedVars);
+      return returnVal;
+    }
+
+    // Variable
+    if (/^\w+$/.test(expr) && expr in this.vars) return this.vars[expr];
+
+    // Operator expressions via JS eval
+    try {
+      let jsExpr = expr;
+      // Python operators -> JS
+      jsExpr = jsExpr.replace(/\bnot\s+/g, '!').replace(/\band\b/g, '&&').replace(/\bor\b/g, '||');
+      jsExpr = jsExpr.replace(/\*\*/g, '**');
+      // Replace variables
+      jsExpr = jsExpr.replace(/\b([a-zA-Z_]\w*)\b/g, (m) => {
+        if (m in this.vars) {
+          const v = this.vars[m];
+          if (v === null) return 'null';
+          if (typeof v === 'string') return JSON.stringify(v);
+          if (typeof v === 'boolean') return v;
+          if (typeof v === 'number') return v;
+          return JSON.stringify(v);
+        }
+        return m;
+      });
+      // eslint-disable-next-line no-new-func
+      return Function('"use strict"; return (' + jsExpr + ')')();
+    } catch(e) {}
+
+    return expr;
+  }
+}
+
+// ─────────────────────────────────────────────────
+//  LUA INTERPRETER
+// ─────────────────────────────────────────────────
+function runLua(code, stdin) {
+  const interp = new LuaInterpreter(log, stdin);
+  interp.run(code);
+}
+
+class LuaInterpreter {
+  constructor(logFn, stdin) {
+    this.log = logFn;
+    this.vars = {};
+    this.functions = {};
+    this.outputBuf = '';
+    this.stdinLines = stdin.split('\n');
+    this.stdinIdx = 0;
+  }
+
+  flushBuf() { if (this.outputBuf) { this.log(this.outputBuf, 'info'); this.outputBuf = ''; } }
+
+  run(code) {
+    code = code.replace(/--[^\n]*/g, '');
+    const stmts = this.splitLuaStatements(code);
+    for (const s of stmts) {
+      try { this.execLua(s.trim()); }
+      catch(e) { this.log('Error: ' + e.message, 'error'); }
+    }
+    this.flushBuf();
+  }
+
+  splitLuaStatements(code) {
+    return code.split('\n').filter(l => l.trim());
+  }
+
+  execLua(s) {
+    if (!s || s.startsWith('--')) return;
+    if (/^print\s*\(/.test(s)) {
+      const inner = s.replace(/^print\s*\(/, '').replace(/\)\s*$/, '');
+      const args = this.parseArgs(inner).map(a => this.luaToString(this.evalLua(a)));
+      this.log(args.join('\t'), 'info');
+      return;
+    }
+    if (/^io\.write\s*\(/.test(s)) {
+      const inner = s.replace(/^io\.write\s*\(/, '').replace(/\)\s*$/, '');
+      const val = this.luaToString(this.evalLua(inner));
+      this.outputBuf += val;
+      return;
+    }
+    if (/^local\s+function\s+(\w+)/.test(s)) return;
+    const localM = s.match(/^local\s+(\w+(?:\s*,\s*\w+)*)\s*=\s*(.+)$/);
+    if (localM) {
+      const names = localM[1].split(',').map(x=>x.trim());
+      const vals = this.parseArgs(localM[2]).map(v => this.evalLua(v));
+      names.forEach((n,i) => { this.vars[n] = vals[i] !== undefined ? vals[i] : null; });
+      return;
+    }
+    const assignM = s.match(/^(\w+)\s*=\s*(.+)$/);
+    if (assignM) { this.vars[assignM[1]] = this.evalLua(assignM[2]); return; }
+    try { this.evalLua(s); } catch(e) {}
+  }
+
+  parseArgs(s) {
+    if (!s.trim()) return [];
+    const args = []; let depth = 0, cur = '';
+    for (const ch of s) {
+      if ('([{'.includes(ch)) { depth++; cur += ch; }
+      else if (')]}'.includes(ch)) { depth--; cur += ch; }
+      else if (ch === ',' && depth === 0) { args.push(cur.trim()); cur = ''; }
+      else cur += ch;
+    }
+    if (cur.trim()) args.push(cur.trim());
+    return args;
+  }
+
+  evalLua(expr) {
+    expr = String(expr).trim();
+    if (!expr) return null;
+    if (expr === 'nil') return null;
+    if (expr === 'true') return true;
+    if (expr === 'false') return false;
+    if (/^-?\d+(\.\d+)?$/.test(expr)) return parseFloat(expr);
+    if (/^".*"$/.test(expr) || /^'.*'$/.test(expr)) return expr.slice(1,-1);
+    if (/^\w+$/.test(expr) && expr in this.vars) return this.vars[expr];
+
+    // Concatenation ..
+    if (expr.includes('..')) {
+      return expr.split('..').map(p => this.luaToString(this.evalLua(p.trim()))).join('');
+    }
+
+    // Arithmetic via JS
+    try {
+      let js = expr.replace(/\b([a-zA-Z_]\w*)\b/g, m => {
+        if (m in this.vars) {
+          const v = this.vars[m];
+          return typeof v === 'string' ? JSON.stringify(v) : String(v);
+        }
+        return m;
+      });
+      // eslint-disable-next-line no-new-func
+      return Function('"use strict"; return (' + js + ')')();
+    } catch(e) {}
+    return expr;
+  }
+
+  luaToString(v) {
+    if (v === null) return 'nil';
+    if (typeof v === 'boolean') return v ? 'true' : 'false';
+    return String(v);
+  }
+}
+
+// ─────────────────────────────────────────────────
+//  BRAINFUCK
+// ─────────────────────────────────────────────────
+function runBrainfuck(code, stdin) {
+  code = code.replace(/[^+\-<>.,[\]]/g, '');
+  const tape = new Uint8Array(30000);
+  let dp = 0, ip = 0, si = 0;
+  const stdinBytes = stdin.split('').map(c => c.charCodeAt(0));
+  let outputStr = '';
+  let steps = 0;
+  const MAX = 500000;
+
+  const brackets = {};
+  const stack = [];
+  for (let i = 0; i < code.length; i++) {
+    if (code[i] === '[') stack.push(i);
+    else if (code[i] === ']') {
+      const j = stack.pop();
+      brackets[j] = i; brackets[i] = j;
+    }
+  }
+
+  while (ip < code.length && steps++ < MAX) {
+    switch (code[ip]) {
+      case '+': tape[dp] = (tape[dp] + 1) & 255; break;
+      case '-': tape[dp] = (tape[dp] - 1 + 256) & 255; break;
+      case '>': dp = (dp + 1) % 30000; break;
+      case '<': dp = (dp - 1 + 30000) % 30000; break;
+      case '.': outputStr += String.fromCharCode(tape[dp]); break;
+      case ',': tape[dp] = si < stdinBytes.length ? stdinBytes[si++] : 0; break;
+      case '[': if (tape[dp] === 0) ip = brackets[ip]; break;
+      case ']': if (tape[dp] !== 0) ip = brackets[ip]; break;
+    }
+    ip++;
+  }
+
+  if (outputStr) {
+    outputStr.split('\n').forEach((l, i, a) => log(l + (i < a.length-1 ? '' : ''), 'info'));
+  }
+  if (steps >= MAX) log('Max steps reached (500k)', 'warn');
+}
+
+// ─────────────────────────────────────────────────
+//  FORTH
+// ─────────────────────────────────────────────────
+function runForth(code, stdin) {
+  const stack = [];
+  const rstack = [];
+  const dict = {};
+
+  function pop() { if (stack.length === 0) throw new Error('Stack underflow'); return stack.pop(); }
+  function push(v) { stack.push(v); }
+  function peek() { return stack[stack.length-1]; }
+
+  const tokens = tokenizeForth(code);
+  let i = 0;
+
+  function execTokens(toks, start) {
+    let j = start;
+    while (j < toks.length) {
+      const t = toks[j];
+      if (t === undefined) break;
+
+      if (t === ':') {
+        const name = toks[++j];
+        const body = [];
+        j++;
+        while (toks[j] !== ';' && j < toks.length) { body.push(toks[j++]); }
+        dict[name.toUpperCase()] = body;
+        j++; continue;
+      }
+      if (t.startsWith('.\"')) {
+        const msg = t.slice(2).replace(/^"/, '').replace(/"$/, '');
+        log(msg, 'info');
+        j++; continue;
+      }
+      if (t === 'CR') { j++; continue; }
+      if (t === 'IF') {
+        const cond = pop();
+        const thenBranch = [], elseBranch = [];
+        let depth = 1;
+        j++;
+        let inElse = false;
+        while (j < toks.length && depth > 0) {
+          if (toks[j] === 'IF') depth++;
+          else if (toks[j] === 'THEN') depth--;
+          else if (toks[j] === 'ELSE' && depth === 1) { inElse = true; j++; continue; }
+          if (depth > 0) { inElse ? elseBranch.push(toks[j]) : thenBranch.push(toks[j]); }
+          j++;
+        }
+        execTokens(cond ? thenBranch : elseBranch, 0);
+        continue;
+      }
+      if (t === 'BEGIN') {
+        const loopBody = [];
+        j++;
+        let depth = 1;
+        while (j < toks.length && depth > 0) {
+          if (toks[j] === 'BEGIN') depth++;
+          else if (toks[j] === 'UNTIL' || toks[j] === 'AGAIN') depth--;
+          if (depth > 0) loopBody.push(toks[j]);
+          j++;
+        }
+        let guard = 0;
+        do {
+          execTokens(loopBody, 0);
+          guard++;
+        } while (!pop() && guard < 10000);
+        continue;
+      }
+      if (t === 'EXIT') return;
+      if (/^-?\d+$/.test(t)) { push(parseInt(t)); j++; continue; }
+      if (t === '.') { log(String(pop()), 'info'); j++; continue; }
+      if (t === 'EMIT') { log(String.fromCharCode(pop()), 'info'); j++; continue; }
+      const ops = {
+        '+': () => push(pop()+pop()),
+        '-': () => { const b=pop(),a=pop(); push(a-b); },
+        '*': () => push(pop()*pop()),
+        '/': () => { const b=pop(),a=pop(); push(Math.trunc(a/b)); },
+        'MOD': () => { const b=pop(),a=pop(); push(a%b); },
+        'DUP': () => push(peek()),
+        'DROP': () => pop(),
+        'SWAP': () => { const b=pop(),a=pop(); push(b); push(a); },
+        'OVER': () => push(stack[stack.length-2]),
+        'ROT': () => { const c=pop(),b=pop(),a=pop(); push(b); push(c); push(a); },
+        '=': () => { const b=pop(),a=pop(); push(a===b?-1:0); },
+        '<': () => { const b=pop(),a=pop(); push(a<b?-1:0); },
+        '>': () => { const b=pop(),a=pop(); push(a>b?-1:0); },
+        '0=': () => push(pop()===0?-1:0),
+        'AND': () => push(pop()&pop()),
+        'OR': () => push(pop()|pop()),
+        'NOT': () => push(pop()===0?-1:0),
+        'NEGATE': () => push(-pop()),
+        'ABS': () => push(Math.abs(pop())),
+        'MAX': () => { const b=pop(),a=pop(); push(Math.max(a,b)); },
+        'MIN': () => { const b=pop(),a=pop(); push(Math.min(a,b)); },
+        '.S': () => log('Stack: ' + stack.join(' '), 'info'),
+        'PRINTLN': () => log(String(pop()), 'info'),
+        'PRINT': () => {
+          const v = pop();
+          const el = output.lastElementChild;
+          if (el && !el.textContent.endsWith('\n')) el.textContent += String(v);
+          else log(String(v), 'info');
+        }
+      };
+      if (ops[t.toUpperCase()]) { ops[t.toUpperCase()](); j++; continue; }
+      if (dict[t.toUpperCase()]) { execTokens(dict[t.toUpperCase()], 0); j++; continue; }
+      j++;
+    }
+  }
+
+  try { execTokens(tokens, 0); }
+  catch(e) { log('Error: ' + e.message, 'error'); }
+}
+
+function tokenizeForth(code) {
+  const tokens = [];
+  const lines = code.split('\n');
+  for (const line of lines) {
+    const stripped = line.replace(/\\.*$/, '').trim();
+    if (!stripped) continue;
+    let i = 0;
+    while (i < stripped.length) {
+      if (stripped[i] === '.' && stripped[i+1] === '"') {
+        const end = stripped.indexOf('"', i+2);
+        if (end >= 0) {
+          tokens.push('."' + stripped.substring(i+2, end) + '"');
+          i = end + 1;
+        } else i++;
+      } else if (stripped[i] === ' ') i++;
+      else {
+        let j = i;
+        while (j < stripped.length && stripped[j] !== ' ') j++;
+        tokens.push(stripped.substring(i, j));
+        i = j;
+      }
+    }
+  }
+  return tokens;
+}
+
+// ─────────────────────────────────────────────────
+//  WHITESPACE (simplified visual)
+// ─────────────────────────────────────────────────
+function runWhitespace(code, stdin) {
+  log('Whitespace: программа получена', 'system');
+  const spaces = (code.match(/ /g)||[]).length;
+  const tabs = (code.match(/\t/g)||[]).length;
+  const newlines = (code.match(/\n/g)||[]).length;
+  log(`Пробелов: ${spaces}, Табов: ${tabs}, Переносов: ${newlines}`, 'info');
+  // Run actual whitespace
+  const WS = { S: ' ', T: '\t', N: '\n' };
+  const filtered = code.split('').filter(c => c === ' ' || c === '\t' || c === '\n').join('');
+  if (filtered.length < 10) {
+    log('Недостаточно whitespace-инструкций. Используйте сниппет "Hello World".', 'warn');
+    return;
+  }
+  try {
+    wsRun(filtered, stdin, log);
+  } catch(e) {
+    log('WS Error: ' + e.message, 'error');
+  }
+}
+
+function wsRun(code, stdin, logFn) {
+  // Whitespace VM
+  const stack = [], heap = {}, callStack = [];
+  let ip = 0;
+  let outputBuf = '';
+  const stdinArr = stdin.split('');
+  let si = 0;
+  const labels = {};
+
+  function readNum() {
+    const sign = code[ip++] === ' ' ? 1 : -1;
+    let bits = '';
+    while (ip < code.length && code[ip] !== '\n') {
+      bits += code[ip++] === ' ' ? '0' : '1';
+      ip++;
+    }
+    ip++;
+    return sign * parseInt(bits || '0', 2);
+  }
+
+  function readLabel() {
+    let label = '';
+    while (ip < code.length && code[ip] !== '\n') {
+      label += code[ip++] === ' ' ? '0' : '1';
+    }
+    ip++;
+    return label;
+  }
+
+  // Pre-scan labels
+  let scanIp = 0;
+  while (scanIp < code.length - 2) {
+    if (code[scanIp] === '\n' && code[scanIp+1] === ' ' && code[scanIp+2] === ' ') {
+      scanIp += 3;
+      let label = '';
+      while (scanIp < code.length && code[scanIp] !== '\n') {
+        label += code[scanIp++] === ' ' ? '0' : '1';
+      }
+      labels[label] = scanIp + 1;
+    }
+    scanIp++;
+  }
+
+  let steps = 0, outChars = 0;
+  try {
+    while (ip < code.length && steps++ < 100000 && outChars < 1000) {
+      const c = code[ip++];
+      if (c === ' ') {
+        const c2 = code[ip++];
+        if (c2 === ' ') { stack.push(readNum()); }
+        else if (c2 === '\t') {
+          const c3 = code[ip++];
+          if (c3 === ' ') { const n=readNum(); stack.push(stack[stack.length-1-n]); }
+          else if (c3 === '\n') { const n=readNum(); const top=stack.pop(); stack.splice(stack.length-n,0,top); }
+        } else if (c2 === '\n') {
+          const c3 = code[ip++];
+          if (c3 === ' ') { stack.push(stack[stack.length-1]); }
+          else if (c3 === '\t') { stack.splice(stack.length-2,1); }
+          else if (c3 === '\n') { stack.pop(); }
+        }
+      } else if (c === '\t') {
+        const c2 = code[ip++];
+        if (c2 === ' ') {
+          const c3 = code[ip++], c4 = code[ip++];
+          const b=stack.pop(), a=stack.pop();
+          if (c3 === ' ' && c4 === ' ') stack.push(a+b);
+          else if (c3 === ' ' && c4 === '\t') stack.push(a-b);
+          else if (c3 === ' ' && c4 === '\n') stack.push(a*b);
+          else if (c3 === '\t' && c4 === ' ') stack.push(Math.trunc(a/b));
+          else if (c3 === '\t' && c4 === '\t') stack.push(a%b);
+        } else if (c2 === '\t') {
+          const c3 = code[ip++];
+          if (c3 === ' ') { const a=stack.pop(); heap[stack.pop()]=a; }
+          else if (c3 === '\t') { const k=stack.pop(); stack.push(heap[k]||0); }
+        } else if (c2 === '\n') {
+          const c3 = code[ip++];
+          if (c3 === ' ') { outputBuf += String.fromCharCode(stack.pop()); outChars++; }
+          else if (c3 === '\t') { outputBuf += String(stack.pop()); outChars++; }
+          if (outputBuf.includes('\n') || outChars > 100) {
+            outputBuf.split('\n').forEach((l,i,a) => { if(i<a.length-1||l) logFn(l,'info'); });
+            outputBuf = '';
+          }
+        }
+      } else if (c === '\n') {
+        const c2 = code[ip++];
+        if (c2 === '\n' && code[ip] === '\n') break; // end
+      }
+    }
+  } catch(e) {}
+  if (outputBuf) logFn(outputBuf, 'info');
+}
+
+// ─────────────────────────────────────────────────
+//  CSS
+// ─────────────────────────────────────────────────
+function runCSS(code, stdin) {
+  canvasWrap.classList.add('visible');
+  const ctx = canvas.getContext('2d');
+  canvas.width = 600; canvas.height = 220;
+  ctx.fillStyle = '#0a0c10';
+  ctx.fillRect(0, 0, 600, 220);
+
+  // Render CSS preview in an iframe-like approach
+  const html = `<!DOCTYPE html><html><head><style>${code}
+  * { box-sizing: border-box; }
+  .card, .glass, .box { display: inline-flex; align-items: center; justify-content: center; min-width: 120px; min-height: 60px; color: white; }
+  </style></head><body>
+  <div class="card"><h1>POLYRUN</h1></div>
+  <div class="glass"><p>CSS Preview</p></div>
+  <div class="box"></div>
+  </body></html>`;
+
+  const blob = new Blob([html], {type: 'text/html'});
+  const url = URL.createObjectURL(blob);
+  const img = new Image();
+  img.onload = () => { ctx.drawImage(img, 0, 0, 600, 220); URL.revokeObjectURL(url); };
+  img.src = url;
+
+  log('CSS готов. Предпросмотр в canvas.', 'success');
+  log('Правила: ' + (code.match(/\{/g)||[]).length + ' блоков', 'info');
+  log('Свойств: ' + (code.match(/:\s*[^;]+;/g)||[]).length, 'info');
+  log('Анимаций: ' + (code.match(/@keyframes/g)||[]).length, 'info');
+}
+
+// ─────────────────────────────────────────────────
+//  SQL ENGINE (in-memory)
+// ─────────────────────────────────────────────────
+function runSQL(code, stdin) {
+  const db = new MiniSQL();
+  const statements = code.split(';').map(s => s.trim()).filter(s => s && !s.startsWith('--'));
+  for (const stmt of statements) {
+    try {
+      const result = db.execute(stmt);
+      if (result) {
+        if (result.columns) {
+          log(result.columns.join(' | '), 'success');
+          log(result.columns.map(c => '-'.repeat(c.length + 2)).join('-+-'), 'system');
+          result.rows.forEach(row => log(result.columns.map(c => String(row[c] ?? 'NULL')).join(' | '), 'info'));
+          log(`(${result.rows.length} row${result.rows.length !== 1 ? 's' : ''})`, 'system');
+        } else if (result.message) {
+          log(result.message, 'success');
+        }
+      }
+    } catch(e) { log('SQL Error: ' + e.message, 'error'); }
+  }
+}
+
+class MiniSQL {
+  constructor() { this.tables = {}; }
+  execute(sql) {
+    sql = sql.trim();
+    const upper = sql.toUpperCase();
+
+    if (upper.startsWith('CREATE TABLE')) {
+      const m = sql.match(/CREATE\s+TABLE\s+(\w+)\s*\(([^)]+)\)/i);
+      if (!m) throw new Error('Invalid CREATE TABLE');
+      const cols = m[2].split(',').map(c => {
+        const parts = c.trim().split(/\s+/);
+        return { name: parts[0], type: parts[1] || 'TEXT', primary: c.toUpperCase().includes('PRIMARY') };
+      });
+      this.tables[m[1].toLowerCase()] = { columns: cols, rows: [] };
+      return { message: `Table '${m[1]}' created` };
+    }
+
+    if (upper.startsWith('INSERT INTO')) {
+      const m = sql.match(/INSERT\s+INTO\s+(\w+)(?:\s*\(([^)]+)\))?\s+VALUES\s*\(([^)]+)\)/i);
+      if (!m) throw new Error('Invalid INSERT');
+      const tname = m[1].toLowerCase();
+      const table = this.tables[tname];
+      if (!table) throw new Error(`Table '${m[1]}' not found`);
+      const colNames = m[2] ? m[2].split(',').map(c=>c.trim()) : table.columns.map(c=>c.name);
+      const vals = this.parseValues(m[3]);
+      const row = {};
+      colNames.forEach((c,i) => { row[c] = vals[i]; });
+      table.rows.push(row);
+      return null;
+    }
+
+    if (upper.startsWith('SELECT')) {
+      return this.execSelect(sql);
+    }
+
+    if (upper.startsWith('DROP TABLE')) {
+      const m = sql.match(/DROP\s+TABLE\s+(\w+)/i);
+      if (m) { delete this.tables[m[1].toLowerCase()]; return { message: `Table '${m[1]}' dropped` }; }
+    }
+
+    if (upper.startsWith('DELETE')) {
+      const m = sql.match(/DELETE\s+FROM\s+(\w+)(?:\s+WHERE\s+(.+))?/i);
+      if (m) {
+        const table = this.tables[m[1].toLowerCase()];
+        if (!table) throw new Error('Table not found');
+        if (m[2]) table.rows = table.rows.filter(r => !this.evalWhere(r, m[2]));
+        else table.rows = [];
+        return { message: `Deleted rows` };
+      }
+    }
+
+    return null;
+  }
+
+  parseValues(s) {
+    return s.split(',').map(v => {
+      v = v.trim();
+      if (/^'.*'$/.test(v)) return v.slice(1,-1);
+      if (/^".*"$/.test(v)) return v.slice(1,-1);
+      const n = parseFloat(v);
+      return isNaN(n) ? v : n;
+    });
+  }
+
+  execSelect(sql) {
+    const m = sql.match(/SELECT\s+([\s\S]+?)\s+FROM\s+(\w+)(?:\s+(?:AS\s+\w+\s+)?)?(?:(?:(?:INNER\s+|LEFT\s+)?JOIN)\s+(\w+)(?:\s+(?:AS\s+\w+))?\s+ON\s+([\s\S]+?))?(?:\s+WHERE\s+([\s\S]+?))?(?:\s+GROUP\s+BY\s+([\s\S]+?))?(?:\s+ORDER\s+BY\s+([\s\S]+?))?(?:\s+LIMIT\s+(\d+))?\s*$/i);
+    if (!m) throw new Error('Invalid SELECT');
+
+    const selectCols = m[1].trim();
+    const tname = m[2].toLowerCase();
+    const joinTable = m[3] ? m[3].toLowerCase() : null;
+    const joinOn = m[4];
+    const whereClause = m[5];
+    const groupBy = m[6];
+    const orderBy = m[7];
+    const limit = m[8] ? parseInt(m[8]) : null;
+
+    const table = this.tables[tname];
+    if (!table) throw new Error(`Table '${m[2]}' not found`);
+
+    let rows = [...table.rows.map(r => Object.assign({}, r))];
+
+    // JOIN
+    if (joinTable && this.tables[joinTable]) {
+      const jt = this.tables[joinTable];
+      const onM = joinOn.match(/(\w+)\.(\w+)\s*=\s*(\w+)\.(\w+)/i);
+      if (onM) {
+        const [, t1, c1, t2, c2] = onM;
+        const newRows = [];
+        for (const r1 of rows) {
+          for (const r2 of jt.rows) {
+            const v1 = r1[c1], v2 = r2[c2];
+            if (String(v1) === String(v2)) {
+              const merged = Object.assign({}, r1, r2);
+              newRows.push(merged);
+            }
+          }
+        }
+        rows = newRows;
+      }
+    }
+
+    // WHERE
+    if (whereClause) rows = rows.filter(r => this.evalWhere(r, whereClause));
+
+    // GROUP BY
+    if (groupBy) {
+      const gbCol = groupBy.trim();
+      const groups = {};
+      rows.forEach(r => {
+        const key = r[gbCol];
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(r);
+      });
+
+      const colDefs = selectCols === '*' ? table.columns.map(c=>c.name) :
+        selectCols.split(',').map(c => c.trim());
+
+      const groupedRows = Object.entries(groups).map(([key, grp]) => {
+        const row = {};
+        colDefs.forEach(col => {
+          const aggM = col.match(/(\w+)\s*\(\s*([^)]+)\s*\)(?:\s+(?:as|AS)\s+(\w+))?/i);
+          if (aggM) {
+            const fn = aggM[1].toUpperCase(), field = aggM[2], alias = aggM[3] || col;
+            const vals = grp.map(r => parseFloat(r[field]) || 0);
+            if (fn === 'COUNT') row[alias] = grp.length;
+            else if (fn === 'SUM') row[alias] = vals.reduce((a,b)=>a+b,0);
+            else if (fn === 'AVG') row[alias] = (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2);
+            else if (fn === 'MAX') row[alias] = Math.max(...vals);
+            else if (fn === 'MIN') row[alias] = Math.min(...vals);
+          } else {
+            const plain = col.replace(/\s+(?:as|AS)\s+\w+$/i, '').trim();
+            row[col] = grp[0][plain];
+          }
+        });
+        return row;
+      });
+      rows = groupedRows;
+    }
+
+    // ORDER BY
+    if (orderBy) {
+      const obM = orderBy.trim().match(/(\w+)(?:\s+(ASC|DESC))?/i);
+      if (obM) {
+        const col = obM[1], dir = (obM[2]||'ASC').toUpperCase();
+        rows.sort((a,b) => {
+          const av = a[col], bv = b[col];
+          const res = typeof av === 'number' ? av - bv : String(av).localeCompare(String(bv));
+          return dir === 'DESC' ? -res : res;
+        });
+      }
+    }
+
+    // LIMIT
+    if (limit !== null) rows = rows.slice(0, limit);
+
+    // Determine output columns
+    let columns;
+    if (selectCols === '*') {
+      columns = Object.keys(rows[0] || table.columns.reduce((o,c)=>({...o,[c.name]:null}),{}));
+    } else {
+      columns = selectCols.split(',').map(c => {
+        const asM = c.trim().match(/^[\s\S]+?\s+(?:as|AS)\s+(\w+)$/i);
+        if (asM) return asM[1];
+        const aggM = c.trim().match(/^\w+\(([^)]+)\)$/i);
+        if (aggM) return c.trim();
+        return c.trim();
+      });
+      // Map columns to row keys
+      if (rows.length > 0) {
+        columns = columns.map(col => {
+          if (col in rows[0]) return col;
+          // Try to find a matching key
+          const key = Object.keys(rows[0]).find(k => k === col || k.toLowerCase() === col.toLowerCase());
+          return key || col;
+        });
+      }
+    }
+
+    // Handle window functions (OVER PARTITION)
+    const overM = selectCols.match(/(\w+)\s*\(\s*([^)]*)\s*\)\s+OVER\s*\(\s*PARTITION\s+BY\s+(\w+)\s+ORDER\s+BY\s+(\w+)(?:\s+(ASC|DESC))?\s*\)/i);
+    if (overM) {
+      const fn = overM[1].toUpperCase(), field = overM[2] || '*', partBy = overM[3], ordBy = overM[4];
+      const alias = selectCols.match(/\)\s+as\s+(\w+)/i)?.[1] || 'window_fn';
+
+      // Group by partition
+      const partitions = {};
+      rows.forEach(r => {
+        const k = r[partBy];
+        if (!partitions[k]) partitions[k] = [];
+        partitions[k].push(r);
+      });
+      Object.values(partitions).forEach(part => {
+        part.sort((a,b) => parseFloat(a[ordBy]||0) - parseFloat(b[ordBy]||0));
+        if (fn === 'RANK') {
+          part.forEach((r,i) => { r[alias] = i+1; });
+        } else if (fn === 'ROW_NUMBER') {
+          part.forEach((r,i) => { r[al
