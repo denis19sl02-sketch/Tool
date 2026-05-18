@@ -1,28 +1,40 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>POLYGLOT IDE - FRONTEND</title>
-    <lesheet" href="1.python">
-    <lesheet" href="2.python">
-        <lessheet"href"3.css">
-    <
+    <!-- Подключаем стили калькулятора -->
+    <link rel="stylesheet" href="3.css">
 </head>
 <body style="background-color: #000; color: #00d2ff; margin: 0; padding: 20px;">
 
+    <!-- Сюда загрузится интерфейс калькулятора -->
     <div id="app"></div>
 
     <script>
+        // Загружаем интерфейс и логику из 3.html
         fetch('3.html')
-            .then(response => response.text())
+            .then(response => {
+                if (!response.ok) throw new Error('Не удалось загрузить 3.html');
+                return response.text();
+            })
             .then(htmlText => {
-                // Создаем временный элемент, чтобы вытащить скрипты из 3.html
                 var parser = new DOMParser();
                 var doc = parser.parseFromString(htmlText, 'text/html');
-                var scripts = doc.querySelectorAll('script');
                 
-                // Переносим и запускаем каждый скрипт-модуль внутри фронтенда
+                // 1. Вытаскиваем и вставляем визуальную часть (всё кроме скриптов)
+                var bodyContent = doc.body ? doc.body.innerHTML : htmlText;
+                // Очищаем от тегов script, чтобы они не дублировались текстом
+                var tempDiv = document.createElement('div');
+                tempDiv.innerHTML = bodyContent;
+                var scriptTags = tempDiv.querySelectorAll('script');
+                scriptTags.forEach(s => s.remove());
+                
+                document.getElementById('app').innerHTML = tempDiv.innerHTML;
+
+                // 2. Вытаскиваем, создаем заново и запускаем скрипты
+                var scripts = doc.querySelectorAll('script');
                 scripts.forEach(oldScript => {
                     var newScript = document.createElement('script');
                     if (oldScript.src) {
@@ -32,7 +44,8 @@
                     }
                     document.body.appendChild(newScript);
                 });
-                console.log('Мозг из 3.html успешно перешел в 2.html!');
+
+                console.log('Интерфейс и мозг из 3.html успешно интегрированы!');
             })
             .catch(err => console.error('Ошибка переезда мозга:', err));
     </script>
