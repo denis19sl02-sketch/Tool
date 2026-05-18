@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DENISIA Input Keyboard</title>
+    <style>
+        /* Черный фон и неоновый стиль */
+        body {
+            background-color: #000000;
+            color: #00d2ff;
+            font-family: 'Courier New', monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        /* Поле вывода */
+        .input-screen {
+            width: 280px;
+            background: #000;
+            border: 2px solid #00d2ff;
+            border-radius: 8px;
+            color: #00d2ff;
+            font-size: 1.5rem;
+            padding: 15px;
+            text-align: right;
+            margin-bottom: 15px;
+            box-shadow: 0 0 15px #00d2ff, inset 0 0 5px #00d2ff;
+        }
+
+        /* Сетка клавиатуры */
+        .keyboard {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            width: 280px;
+        }
+
+        /* Кнопки */
+        .btn {
+            background: #000;
+            border: 1px solid #00d2ff;
+            border-radius: 6px;
+            color: #00d2ff;
+            font-size: 1.3rem;
+            font-weight: bold;
+            padding: 15px 0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-shadow: 0 0 5px #00d2ff;
+        }
+
+        /* Эффект нажатия */
+        .btn:hover {
+            background: #00d2ff;
+            color: #000;
+            box-shadow: 0 0 15px #00d2ff;
+            text-shadow: none;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Кнопка Сброс (C) */
+        .btn-clear {
+            grid-column: span 2;
+            border-color: #ff0055;
+            color: #ff0055;
+            text-shadow: 0 0 5px #ff0055;
+        }
+        .btn-clear:hover {
+            background: #ff0055;
+            color: #000;
+            box-shadow: 0 0 15px #ff0055;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Экран ввода -->
+    <div class="input-screen" id="screen"></div>
+
+    <!-- Клавиатура -->
+    <div class="keyboard">
+        <!-- Управление -->
+        <button class="btn btn-clear" onclick="clearScreen()">C</button>
+        <button class="btn" onclick="press('÷')">÷</button>
+        <button class="btn" onclick="press('×')">×</button>
+
+        <!-- Цифры и операции -->
+        <button class="btn" onclick="press('7')">7</button>
+        <button class="btn" onclick="press('8')">8</button>
+        <button class="btn" onclick="press('9')">9</button>
+        <button class="btn" onclick="press('-')">-</button>
+
+        <button class="btn" onclick="press('4')">4</button>
+        <button class="btn" onclick="press('5')">5</button>
+        <button class="btn" onclick="press('6')">6</button>
+        <button class="btn" onclick="press('+')">+</button>
+
+        <button class="btn" onclick="press('1')">1</button>
+        <button class="btn" onclick="press('2')">2</button>
+        <button class="btn" onclick="press('3')">3</button>
+        <button class="btn" onclick="press('0')">0</button>
+    </div>
+
+    <script>
+        const screen = document.getElementById('screen');
+
+        function press(value) {
+            screen.innerText += value;
+        }
+
+        function clearScreen() {
+            screen.innerText = '';
+        }
+    </script>
+
+</body>
+</html>
